@@ -14,7 +14,7 @@ start(_Type, _StartArgs) ->
     {ok, _} = ranch:start_listener(gateway, 
                                    200, 
                                    ranch_tcp, 
-                                   [{port, ?GAME_PORT},{active, once}], 
+                                   [{port, ?GAME_PORT},{active, once}, {packet,2}], 
                                    gateway_protocol, 
                                    []),
     case gateway_sup:start_link() of
