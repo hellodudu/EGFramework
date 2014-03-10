@@ -1,3 +1,5 @@
+%%Author: Anthony Jiang <2nth0nyj@gmail.com>
+%% -*- coding: utf-8 -*-
 %% @author anthonyjiang
 %% @doc @todo Add description to logic_app.
 
@@ -25,7 +27,7 @@
 	| {ok, Pid :: pid(), State :: term()}
 	| {error, Reason :: term()}.
 %% ====================================================================
-start(Type, StartArgs) ->
+start(_Type, StartArgs) ->
     case 'TopSupervisor':start_link(StartArgs) of
 		{ok, Pid} ->
 			{ok, Pid};
@@ -38,7 +40,7 @@ start(Type, StartArgs) ->
 %% @doc <a href="http://www.erlang.org/doc/apps/kernel/application.html#Module:stop-1">application:stop/1</a>
 -spec stop(State :: term()) ->  Any :: term().
 %% ====================================================================
-stop(State) ->
+stop(_State) ->
     ok.
 
 %% ====================================================================

@@ -1,5 +1,5 @@
 game
 ====
 
-an erlang game server based on ranch, piqi and redis etc.
+an erlang game server based on ranch, google protocol buffer and mysql.
 

@@ -1,16 +1,16 @@
+%%Author: Anthony Jiang <2nth0nyj@gmail.com>
+%% -*- coding: utf-8 -*-
 %% @author anthonyjiang
-%% @doc @todo Add description to account.
+%% @doc @todo Add description to logic_sup.
 
 
--module(account).
+-module(logic_sup).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
 -export([]).
-    
-get_account(anonymous, AccountName) ->
-    
+
 
 
 %% ====================================================================

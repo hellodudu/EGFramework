@@ -1,8 +1,10 @@
+%%Author: Anthony Jiang <2nth0nyj@gmail.com>
+%% -*- coding: utf-8 -*-
 %% @author anthonyjiang
-%% @doc @todo Add description to logic_sup.
+%% @doc @todo Add description to player_sup.
 
 
--module(logic_sup).
+-module(player_sup).
 
 %% ====================================================================
 %% API functions

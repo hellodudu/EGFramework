@@ -1,5 +1,9 @@
+%%Author: Anthony Jiang <2nth0nyj@gmail.com>
+%% -*- coding: utf-8 -*-
 -module(gateway_protocol).
 -include("gateway.hrl").
+-include("account_pb.hrl").
+-include("role_pb.hrl").
 
 -behaviour(gen_server).
 -behaviour(ranch_protocol).
@@ -11,14 +15,14 @@
 
 
 %%api functions
-message(PlayerId, Message) ->
-    GateWayName = "gateway_" ++ erlang:integer_to_list(PlayerId),
-    GateWay = erlang:list_to_atom(GateWayName),
-    case erlang:whereis(GateWay) of
-        Pid when erlang:is_pid(Pid) -> Pid ! {message, Message};
-        _Port when erlang:is_port(_Port) -> ignore;
-        undefined -> ignore
-    end.
+%% message(PlayerId, Message) ->
+%%     GateWayName = "gateway_" ++ erlang:integer_to_list(PlayerId),
+%%     GateWay = erlang:list_to_atom(GateWayName),
+%%     case erlang:whereis(GateWay) of
+%%         Pid when erlang:is_pid(Pid) -> Pid ! {message, Message};
+%%         _Port when erlang:is_port(_Port) -> ignore;
+%%         undefined -> ignore
+%%     end.
 
 %%Behavior functions
 start_link(Ref, Socket, Transport, Opts) ->
@@ -67,7 +71,7 @@ handle_info({message, Record}, State) when is_tuple(Record) ->
     RecordNameLengthBinary = binary:encode_unsigned(RecordNameLength, little),
     RepliedIOData = << RecordNameLengthBinary/binary, RecordNameBinary/binary, SerializedData/binary >>,
     #state{socket=Socket, transport=Transport} = State,
-    Transport:send(Socket, RepliedIOData).
+    Transport:send(Socket, RepliedIOData);
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -87,9 +91,11 @@ decode(BinaryData) when erlang:is_binary(BinaryData) ->
     MessageRecord = erlang:list_to_atom(string:to_lower(MessageString)),
     File:decode(MessageRecord, Rest2).
 
-
-%%All Client Message Handled Here
-handle(#cs_account_anonymous_login{device_token=DeviceToken}) ->
-    account:get_account(anonymous,DeviceToken).
-
+%%message dispatch here
+handle(CsAccountLogin) when is_record(CsAccountLogin, cs_account_login) ->
+    LoginResult = account:account_login(CsAccountLogin),
+    case LoginResult of
+        {error, ErrorNumber} -> self() ! {message, #sc_account_login{response_code=ErrorNumber,role_list=[]}} ;
+        {ok, RoleRecords} -> self() ! {message, #sc_account_login{response_code=0, role_list = RoleRecords}} 
+    end.
 

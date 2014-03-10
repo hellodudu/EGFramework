@@ -1,3 +1,0 @@
-message cs_account_anonymous_login{
-    optional string device_token = 1[default=""];
-}
