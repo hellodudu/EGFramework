@@ -65,7 +65,7 @@ handle_info({message, Record}, State) when is_tuple(Record) ->
     RecordName = erlang:atom_to_list(RecordNameAtom),
     RecordNameBinary = erlang:list_to_binary(RecordName),
     [ "sc", ProtoFileName | _Command ] = string:tokens(RecordName, "_"),
-    File = erlang:list_to_atom(ProtoFileName ++ "_pb"),
+    File = erlang:list_to_existing_atom(ProtoFileName ++ "_pb"),
     SerializedData = File:encode(Record),
     RecordNameLength = erlang:length(RecordName),
     RecordNameLengthBinary = binary:encode_unsigned(RecordNameLength, little),
@@ -87,8 +87,8 @@ decode(BinaryData) when erlang:is_binary(BinaryData) ->
     <<Message:MessageLength/bytes, Rest2/binary>> = Rest1,
     MessageString = erlang:binary_to_list(Message),
     ["cs", ProtoFileName | _Command ] = string:tokens( MessageString, "_"),    
-    File = erlang:list_to_atom(ProtoFileName ++ "_pb"),
-    MessageRecord = erlang:list_to_atom(string:to_lower(MessageString)),
+    File = erlang:list_to_existing_atom(ProtoFileName ++ "_pb"),
+    MessageRecord = erlang:list_to_existing_atom(string:to_lower(MessageString)),
     File:decode(MessageRecord, Rest2).
 
 %%message dispatch here
