@@ -7,17 +7,12 @@
 
 -export([start/2, stop/1]).
 
-%% -spec start(Type :: normal | {takeover, Node} | {failover, Node}, Args :: term()) ->
-%% 	{ok, Pid :: pid()}
-%% 	| {ok, Pid :: pid(), State :: term()}
-%% 	| {error, Reason :: term()}.
-%% ====================================================================
 start(_Type, _StartArgs) ->
     {ok, _} = ranch:start_listener(gateway, 
-                                   200, 
+                                   2000, 
                                    ranch_tcp, 
                                    [{port, ?GAME_PORT},{active, once}, {packet,2}], 
-                                   gateway_protocol, 
+                                   gateway, 
                                    []),
     case gateway_sup:start_link() of
 		{ok, Pid} ->
@@ -26,9 +21,6 @@ start(_Type, _StartArgs) ->
 			Error
     end.
 
-
-%% -spec stop(State :: term()) ->  Any :: term().
-%% ====================================================================
 stop(State) ->
     State.
 

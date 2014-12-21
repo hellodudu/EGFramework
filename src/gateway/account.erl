@@ -4,27 +4,16 @@
 
 -include("account_pb.hrl").
 -include("role_pb.hrl").
+-include("error_code.hrl").
 
--export([account_login/1]).
+-export([handle/1]).
 
-
-account_login(CsAccountLogin) ->
-    #cs_account_login{name=Name, password=Password} = CsAccountLogin,
-    Sql = "SELECT `id` FROM `game`.`account` WHERE `name` = "++ "'" ++ 
-              Name ++ "' " ++ "AND" ++ "`password` =" ++ "'" ++Password++"'" ++" ;",
-    ResultPacket = emysql:execute(game, Sql),
-    AccountRecords = emysql:as_record(ResultPacket, account, record_info(fields,account)),
-    case AccountRecords of
-        [] -> {error, -1}; %%login error, no such account
-        [AccountRecord] -> 
-            AccountId = AccountRecord#account.id,
-            AccountIdString = erlang:integer_to_list(AccountId),
-            Sql1 = "SELECT `role`.* FROM `account` JOIN `account_to_role` ON
-                    `account`.`id` = `account_to_role`.`account_id`  JOIN `role` ON `account_to_role`.`role_id` = `role`.`id` WHERE `account`.`id` = " ++ "'" ++
-                       AccountIdString ++ "' ;",
-            ResultPacket1 = emysql:execute(game, Sql1),
-            RoleRecords = emysql:as_record(ResultPacket1, role, record_info(fields,role)),
-            {ok, RoleRecords}
-    end.
-
+handle(CsAccountLogin) when erlang:is_record(CsAccountLogin, cs_account_login) ->
+    #cs_account_login{token=Token} = CsAccountLogin,
+    %%%%%%% make a http request to game platform to validate login and account info,
+    %%%%%%% for simplicity, generate a random account id here,
+    %%%%%%% for production environment, should get an account from game platform by a http reqeust
+    AccountId = random:uniform(20000),
+    ReturnedRecord = #sc_account_login{ result = ?SUCCESS },
+    gateway:send( ReturnedRecord ).
 

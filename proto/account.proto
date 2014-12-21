@@ -1,18 +1,7 @@
-import "role.proto";
-
-message account{
-    optional int64 id = 1;
-    optional string name = 2;
-    optional string password = 3;
-    optional int32 type = 4;
-}
-
 message cs_account_login{
-    required string name = 1;
-    required string password = 2;
+    required string token = 1;
 }
 
 message sc_account_login{
-    required int32 response_code = 1;
-    repeated role role_list = 2;
+    required  int32 result = 1;
 }

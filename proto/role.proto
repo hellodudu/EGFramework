@@ -1,7 +1,18 @@
-message role {
-    optional int64 id = 1;
-    optional string name = 2;
-    optional string sex = 3;
-    optional int32 level = 4;
+message cs_role_get_info {
+    required int32 account_id = 1;
 }
 
+message role {
+    optional int32 role_id = 1;
+    optional string name = 2;
+    optional int32 level = 3;
+}
+
+message sc_role_get_info {
+    required int32 result = 1;
+    optional role role = 2;
+}
+
+message cs_role_create_role {
+    optional role role = 1;
+}

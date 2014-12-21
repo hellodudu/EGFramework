@@ -1,6 +1,6 @@
 %%Author: Anthony Jiang <2nth0nyj@gmail.com>
 %% -*- coding: utf-8 -*-
--module(gateway_protocol).
+-module(gateway).
 -include("gateway.hrl").
 -include("account_pb.hrl").
 -include("role_pb.hrl").
@@ -8,33 +8,38 @@
 -behaviour(gen_server).
 -behaviour(ranch_protocol).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([init/4, start_link/4]).
+-export([role_started/2, send_to_role/1, send_to_role/2]).
 
--export([init/4]).
--export([start_link/4]).
--record(state, {socket,transport}).
+-record(state, {socket=undefined,transport=undefined,
+                gateway_pid=undefined,
+                role_id=undefined,
+                role_pid=undefined}).
 
-
-%%api functions
-%% message(PlayerId, Message) ->
-%%     GateWayName = "gateway_" ++ erlang:integer_to_list(PlayerId),
-%%     GateWay = erlang:list_to_atom(GateWayName),
-%%     case erlang:whereis(GateWay) of
-%%         Pid when erlang:is_pid(Pid) -> Pid ! {message, Message};
-%%         _Port when erlang:is_port(_Port) -> ignore;
-%%         undefined -> ignore
-%%     end.
-
-%%Behavior functions
 start_link(Ref, Socket, Transport, Opts) ->
     proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts]).
 
-init([]) -> {ok, not_used}.
+role_started( RoleId, RolePid ) ->
+    GatewayPid = erlang:get(gateway_pid),
+    erlang:send( GatewayPid, {role_id, RoleId, role_pid, RolePid} ). 
+
+send_to_role(Message) ->
+    Gatewaypid = erlang:get(gateway_pid),
+    erlang:send( GatewayPid, Message).
+send_to_role(GatewayPid, Message) when erlang:is_pid(GatewayPid) ->
+    erlang:send( GatewayPid, {message, Message} );
+send_to_role(GatewayPid, {message, Message}) when erlang:is_pid(GatewayPid)->
+    erlang:send( GatewayPid, {message, Message} ).
+
+init([]) -> {ok, #state{} }.
 
 init(Ref, Socket, Transport, _Opts) ->
     ok = proc_lib:init_ack({ok, self()}),
     ok = ranch:accept_ack(Ref),
     ok = Transport:setopts(Socket, [{active, once}]),
-    gen_server:enter_loop(?MODULE, [], #state{socket=Socket, transport=Transport}, ?TIMEOUT).
+    GatewayPid = erlang:self(),
+    erlang:put(gateway_pid, GatewayPid),
+    gen_server:enter_loop(?MODULE, [], #state{socket=Socket, transport=Transport,gateway_pid=GatewayPid}, ?TIMEOUT).
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -45,8 +50,9 @@ handle_cast(_Msg, State) ->
 
 handle_info({tcp,Socket,Data},State=#state{socket=Socket,transport=Transport}) ->
     try
-        Record = decode(Data),
-        handle(Record),
+        MessageRecord = decode(Data),
+        #state{ gateway_pid=GatewayPid,role_pid=RolePid} = State,
+        route(MessageRecord,GatewayPid,RolePid),
         Transport:setopts(Socket, [{active, once}])
     catch
         Error:Reason ->
@@ -60,7 +66,7 @@ handle_info({tcp_error,_Socket, Reason}, State) ->
     {stop, Reason, State};
 handle_info(timeout, State) ->
     {stop, normal, State};
-handle_info({message, Record}, State) when is_tuple(Record) ->
+handle_info({message, Record}, State) when erlang:is_tuple(Record) ->
     RecordNameAtom = erlang:element(1, Record),
     RecordName = erlang:atom_to_list(RecordNameAtom),
     RecordNameBinary = erlang:list_to_binary(RecordName),
@@ -72,7 +78,9 @@ handle_info({message, Record}, State) when is_tuple(Record) ->
     RepliedIOData = << RecordNameLengthBinary/binary, RecordNameBinary/binary, SerializedData/binary >>,
     #state{socket=Socket, transport=Transport} = State,
     Transport:send(Socket, RepliedIOData);
-
+handle_info( {role_id, RoleId, role_pid, RolePid}, State ) ->
+    NewState = State#state{ role_id = RoleId, role_pid=RolePid },
+    {noreply, NewState};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -91,11 +99,10 @@ decode(BinaryData) when erlang:is_binary(BinaryData) ->
     MessageRecord = erlang:list_to_existing_atom(string:to_lower(MessageString)),
     File:decode(MessageRecord, Rest2).
 
-%%message dispatch here
-handle(CsAccountLogin) when is_record(CsAccountLogin, cs_account_login) ->
-    LoginResult = account:account_login(CsAccountLogin),
-    case LoginResult of
-        {error, ErrorNumber} -> self() ! {message, #sc_account_login{response_code=ErrorNumber,role_list=[]}} ;
-        {ok, RoleRecords} -> self() ! {message, #sc_account_login{response_code=0, role_list = RoleRecords}} 
-    end.
-
+route(MessageRecord, GatewayPid, undefined) when erlang:is_pid(GatewayPid)->
+    MessageName = erlang:element(1, erlang:element(1, MessageRecord) ),
+    [ "cs", ModuleName, _Command ] = MessageName,
+    Module = erlang:list_to_existing_atom(ModuleName),
+    Module:handle( MessageRecord );
+route(MessageRecord, _GatewayPid, RolePid) when erlang:is_pid(RolePid) ->
+    erlang:send( RolePid, MessageRecord ).
