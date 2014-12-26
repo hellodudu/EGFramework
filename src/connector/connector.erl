@@ -52,19 +52,21 @@ handle_info({tcp,Socket,Data},Session) ->
         Transport:setopts(Socket, [{active, once}])
     catch
         Error:Reason ->
-            error_logger:warning_msg( "Error in connector while decoding message with Error:~w, Reason:~w, and stacktrace: ~w",
+            error_logger:warning_msg( "Error in connector while decoding message with 
+                                       Error:~w, Reason:~w, and stacktrace: ~w",
                                       [ Error, Reason, erlang:get_stacktrace()] )
     end,
     {noreply, Session, ?TIMEOUT};
 handle_info({tcp_closed,_Socket}, Session) ->
-    notify_session_state(lost, Session),
-    {stop, normal, State};
-handle_info({tcp_error,_Socket, Reason}, State) ->
-    notify_session_state(lost, Session),
-    {stop, Reason, State};
-handle_info(timeout, State) ->
-    {stop, normal, State};
-handle_info({message, Record}, State) when erlang:is_tuple(Record) ->
+    after_session_lost(Session),
+    {stop, normal, Session};
+handle_info({tcp_error,_Socket, Reason}, Session) ->
+    after_session_lost(Session),
+    {stop, Reason, Session};
+handle_info(timeout, Session) ->
+    after_session_lost(Session),
+    {stop, normal, Session};
+handle_info({message, Record}, Session) when erlang:is_tuple(Record) ->
     RecordNameAtom = erlang:element(1, Record),
     RecordName = erlang:atom_to_list(RecordNameAtom),
     RecordNameBinary = erlang:list_to_binary(RecordName),
@@ -74,13 +76,13 @@ handle_info({message, Record}, State) when erlang:is_tuple(Record) ->
     RecordNameLength = erlang:length(RecordName),
     RecordNameLengthBinary = binary:encode_unsigned(RecordNameLength, little),
     RepliedIOData = << RecordNameLengthBinary/binary, RecordNameBinary/binary, SerializedData/binary >>,
-    #state{socket=Socket, transport=Transport} = State,
+    #session{socket=Socket, transport=Transport} = Session,
     Transport:send(Socket, RepliedIOData);
-handle_info( {role_id, RoleId, role_pid, RolePid}, State ) ->
-    NewState = State#state{ role_id = RoleId, role_pid=RolePid },
-    {noreply, NewState};
-handle_info(_Info, State) ->
-    {noreply, State}.
+handle_info( {role_id, RoleId, role_pid, RolePid}, Session) ->
+    NewSession = Session#session{ role_id = RoleId, role_pid=RolePid },
+    {noreply, NewSession};
+handle_info(_Info, Session) ->
+    {noreply, Session}.
 
 terminate(_Reason, _State) ->
     ok.
@@ -106,9 +108,9 @@ route(MessageRecord, GatewayPid, undefined) when erlang:is_pid(GatewayPid)->
 route(MessageRecord, _GatewayPid, RolePid) when erlang:is_pid(RolePid) ->
     erlang:send( RolePid, MessageRecord ).
 
-notify_session_state(lost, Session) ->
+after_session_lost(Session) ->
     RolePid = Session#session.role_pid,
     if
-        erlang:is_pid( Rolepid ) -> erlang:send( RolePid, connection_lost );
-        _ -> ignore
+        erlang:is_pid( RolePid ) -> erlang:send( RolePid, connection_lost );
+        true -> ignore
     end.

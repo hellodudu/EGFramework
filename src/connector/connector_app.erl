@@ -11,10 +11,10 @@ start(_Type, _StartArgs) ->
                                    connector, 
                                    []),
     case connector_sup:start_link() of
-		{ok, Pid} ->
-			{ok, Pid};
-		Error ->
-			Error
+        {ok, Pid} ->
+            {ok, Pid};
+        Error ->
+            Error
     end.
 
 stop(State) ->

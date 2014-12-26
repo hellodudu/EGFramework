@@ -1,4 +1,4 @@
--defien( SUCCESS, 0).
+-define( SUCCESS, 0).
 
 
 %%%%Role%%%%

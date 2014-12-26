@@ -9,6 +9,3 @@ start_link() ->
 init([]) ->
     AChild = [],
     {ok,{{one_for_one,10,10}, AChild}}.
-
-
-
