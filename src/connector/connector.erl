@@ -1,9 +1,8 @@
-%%Author: Anthony Jiang <2nth0nyj@gmail.com>
-%% -*- coding: utf-8 -*-
--module(gateway).
+-module(connector).
 -include("gateway.hrl").
 -include("account_pb.hrl").
 -include("role_pb.hrl").
+-include("session.hrl").
 
 -behaviour(gen_server).
 -behaviour(ranch_protocol).
@@ -11,58 +10,57 @@
 -export([init/4, start_link/4]).
 -export([role_started/2, send_to_role/1, send_to_role/2]).
 
--record(state, {socket=undefined,transport=undefined,
-                gateway_pid=undefined,
-                role_id=undefined,
-                role_pid=undefined}).
-
 start_link(Ref, Socket, Transport, Opts) ->
     proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts]).
 
 role_started( RoleId, RolePid ) ->
-    GatewayPid = erlang:get(gateway_pid),
-    erlang:send( GatewayPid, {role_id, RoleId, role_pid, RolePid} ). 
+    ConnectorPid = erlang:get(connector_pid),
+    erlang:send( ConnectorPid, {role_id, RoleId, role_pid, RolePid} ). 
 
 send_to_role(Message) ->
-    Gatewaypid = erlang:get(gateway_pid),
-    erlang:send( GatewayPid, Message).
-send_to_role(GatewayPid, Message) when erlang:is_pid(GatewayPid) ->
-    erlang:send( GatewayPid, {message, Message} );
-send_to_role(GatewayPid, {message, Message}) when erlang:is_pid(GatewayPid)->
-    erlang:send( GatewayPid, {message, Message} ).
+    ConnectorPid = erlang:get(connector_pid),
+    erlang:send( ConnectorPid, Message).
+send_to_role(ConnectorPid, Message) when erlang:is_pid(ConnectorPid) ->
+    erlang:send( ConnectorPid, {message, Message} );
+send_to_role(ConnectorPid, {message, Message}) when erlang:is_pid(ConnectorPid)->
+    erlang:send( ConnectorPid, {message, Message} ).
 
-init([]) -> {ok, #state{} }.
+init([]) -> {ok, #session{} }.
 
 init(Ref, Socket, Transport, _Opts) ->
     ok = proc_lib:init_ack({ok, self()}),
     ok = ranch:accept_ack(Ref),
     ok = Transport:setopts(Socket, [{active, once}]),
-    GatewayPid = erlang:self(),
-    erlang:put(gateway_pid, GatewayPid),
-    gen_server:enter_loop(?MODULE, [], #state{socket=Socket, transport=Transport,gateway_pid=GatewayPid}, ?TIMEOUT).
+    ConnectorPid = erlang:self(),
+    erlang:put(connector_pid, ConnectorPid),
+    Session = #session{socket=Socket,transport=Transport,connector_pid=ConnectorPid},
+    gen_server:enter_loop(?MODULE, [], Session, ?TIMEOUT).
 
-handle_call(_Request, _From, State) ->
+handle_call(_Request, _From, Session) ->
     Reply = ok,
-    {reply, Reply, State}.
+    {reply, Reply, Session}.
 
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+handle_cast(_Msg, Session) ->
+    {noreply, Session}.
 
-handle_info({tcp,Socket,Data},State=#state{socket=Socket,transport=Transport}) ->
+handle_info({tcp,Socket,Data},Session) ->
     try
+        #session{socket=Socket, transport=Transport,
+                 connector_pid=ConnectorPid,role_pid=RolePid} = Session,
         MessageRecord = decode(Data),
-        #state{ gateway_pid=GatewayPid,role_pid=RolePid} = State,
-        route(MessageRecord,GatewayPid,RolePid),
+        route(MessageRecord,ConnectorPid,RolePid),
         Transport:setopts(Socket, [{active, once}])
     catch
         Error:Reason ->
-            error_logger:warning_msg( "Error in gateway when decoding message with Error:~w, Reason:~w, and stacktrace: ~w",
+            error_logger:warning_msg( "Error in connector while decoding message with Error:~w, Reason:~w, and stacktrace: ~w",
                                       [ Error, Reason, erlang:get_stacktrace()] )
     end,
-    {noreply, State, ?TIMEOUT};
-handle_info({tcp_closed,_Socket}, State) ->
+    {noreply, Session, ?TIMEOUT};
+handle_info({tcp_closed,_Socket}, Session) ->
+    notify_session_state(lost, Session),
     {stop, normal, State};
 handle_info({tcp_error,_Socket, Reason}, State) ->
+    notify_session_state(lost, Session),
     {stop, Reason, State};
 handle_info(timeout, State) ->
     {stop, normal, State};
@@ -99,6 +97,7 @@ decode(BinaryData) when erlang:is_binary(BinaryData) ->
     MessageRecord = erlang:list_to_existing_atom(string:to_lower(MessageString)),
     File:decode(MessageRecord, Rest2).
 
+%%route message to gateway process or player process
 route(MessageRecord, GatewayPid, undefined) when erlang:is_pid(GatewayPid)->
     MessageName = erlang:element(1, erlang:element(1, MessageRecord) ),
     [ "cs", ModuleName, _Command ] = MessageName,
@@ -106,3 +105,10 @@ route(MessageRecord, GatewayPid, undefined) when erlang:is_pid(GatewayPid)->
     Module:handle( MessageRecord );
 route(MessageRecord, _GatewayPid, RolePid) when erlang:is_pid(RolePid) ->
     erlang:send( RolePid, MessageRecord ).
+
+notify_session_state(lost, Session) ->
+    RolePid = Session#session.role_pid,
+    if
+        erlang:is_pid( Rolepid ) -> erlang:send( RolePid, connection_lost );
+        _ -> ignore
+    end.

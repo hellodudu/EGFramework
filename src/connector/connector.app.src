@@ -1,0 +1,10 @@
+{application, connector, [
+    {description, "Game TCP accecptor pool, every player has one 
+                   connector process to maintain its frontend session"},
+    {vsn, "0.0.1"},
+    {modules, []},
+    {registered, [connector_sup]},
+    {applications, [ ranch ] },
+    {mod, {connector_sup, [] } },
+    {env, []}
+]}.

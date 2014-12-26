@@ -1,6 +1,4 @@
-%%Author: Anthony Jiang <2nth0nyj@gmail.com>
-%% -*- coding: utf-8 -*-
--module(gateway_sup).
+-module(connector_sup).
 -behaviour(supervisor).
 
 -export([start_link/0,init/1]).

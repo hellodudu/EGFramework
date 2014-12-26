@@ -1,0 +1,11 @@
+{application, game, [
+    {description, "Game logic application."},
+    {vsn, "0.0.1"},
+    {modules, [] },
+    {registered, [game_sup]},
+    {applications, [gateway]},
+    {mod, {game_sup, [] } },
+    {env, [
+        
+    ]}
+]}.
