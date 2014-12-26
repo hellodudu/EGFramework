@@ -3,6 +3,7 @@ deps/
 *.o
 *.beam
 *.plt
+*_pb.hrl
 erl_crash.dump
 ebin/
 .project
