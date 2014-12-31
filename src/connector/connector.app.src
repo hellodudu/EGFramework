@@ -5,5 +5,7 @@
     {registered, [connector_sup]},
     {applications, [ ranch ] },
     {mod, {connector_app, [] } },
-    {env, []}
+    {env, [
+        {db_node_list, [ 'node1@localhost', 'node2@localhost', 'node3@localhost' ] }
+    ]}
 ]}.

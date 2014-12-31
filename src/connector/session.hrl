@@ -4,5 +4,6 @@
                    transport,
                    connector_pid,
                    role_id,
-                   role_pid
+                   role_pid,
+                   db_connection,
                   } ).

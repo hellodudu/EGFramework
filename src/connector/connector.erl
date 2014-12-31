@@ -81,6 +81,9 @@ handle_info({message, Record}, Session) when erlang:is_tuple(Record) ->
 handle_info( {role_id, RoleId, role_pid, RolePid}, Session) ->
     NewSession = Session#session{ role_id = RoleId, role_pid=RolePid },
     {noreply, NewSession};
+handle_info( {new_db_connection, DbConnection}, Session ) ->
+    NewSession = Session#session{db_connection=DbConnection},
+    {noreply, NewSession};
 handle_info(_Info, Session) ->
     {noreply, Session}.
 
