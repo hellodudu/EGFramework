@@ -2,7 +2,7 @@ message cs_role_get_info {
     required int32 account_id = 1;
 }
 
-message role {
+message role_message {
     optional int32 role_id = 1;
     optional string name = 2;
     optional int32 level = 3;
@@ -10,9 +10,14 @@ message role {
 
 message sc_role_get_info {
     required int32 result = 1;
-    optional role role = 2;
+    optional role_message role = 2;
 }
 
 message cs_role_create_role {
-    optional role role = 1;
+    required string name = 1;
+    required int32 sex = 2;
+}
+
+message sc_role_create_role {
+
 }

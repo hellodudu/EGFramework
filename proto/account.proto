@@ -14,5 +14,5 @@ message cs_account_create_role{
 
 message sc_account_create_role{
     required int32 result = 1;
-    optional int32 role_id = 2;
+    optional string role_id = 2;
 }
