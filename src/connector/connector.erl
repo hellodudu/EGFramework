@@ -13,10 +13,6 @@
 start_link(Ref, Socket, Transport, Opts) ->
     proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts]).
 
-role_started( RoleId, RolePid ) ->
-    ConnectorPid = erlang:get(connector_pid),
-    erlang:send( ConnectorPid, {role_id, RoleId, role_pid, RolePid} ). 
-
 send_to_role(Message) ->
     ConnectorPid = erlang:get(connector_pid),
     erlang:send( ConnectorPid, Message).
@@ -81,8 +77,8 @@ handle_info({message, Record}, Session) when erlang:is_tuple(Record) ->
 handle_info( {role_id, RoleId, role_pid, RolePid}, Session) ->
     NewSession = Session#session{ role_id = RoleId, role_pid=RolePid },
     {noreply, NewSession};
-handle_info( {new_db_connection, DbConnection}, Session ) ->
-    NewSession = Session#session{db_connection=DbConnection},
+handle_info( {session_riak_connection_pid, RiakConnectionPid,session_account_id, SessionAccountId}, Session ) ->
+    NewSession = Session#session{riak_connection_pid=RiakConnectionPid,account_id=AccountId},
     {noreply, NewSession};
 handle_info(_Info, Session) ->
     {noreply, Session}.
@@ -102,13 +98,14 @@ decode(BinaryData) when erlang:is_binary(BinaryData) ->
     MessageRecord = erlang:list_to_existing_atom(string:to_lower(MessageString)),
     File:decode(MessageRecord, Rest2).
 
-%%route message to gateway process or player process
-route(MessageRecord, GatewayPid, undefined) when erlang:is_pid(GatewayPid)->
+%%route message to connector when client is just connected, and not login yet
+route(MessageRecord, ConnectorPid, undefined) when erlang:is_pid(ConnectorPid)->
     MessageName = erlang:element(1, erlang:element(1, MessageRecord) ),
     [ "cs", ModuleName, _Command ] = MessageName,
     Module = erlang:list_to_existing_atom(ModuleName),
     Module:handle( MessageRecord );
-route(MessageRecord, _GatewayPid, RolePid) when erlang:is_pid(RolePid) ->
+%%route message to logic procoess when client has logged in, as well as its associated player process is started
+route(MessageRecord, _ConnectorPid, RolePid) when erlang:is_pid(RolePid) ->
     erlang:send( RolePid, MessageRecord ).
 
 after_session_lost(Session) ->

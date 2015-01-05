@@ -6,6 +6,6 @@
     {applications, [ ranch ] },
     {mod, {connector_app, [] } },
     {env, [
-        {db_node_list, [ 'node1@localhost', 'node2@localhost', 'node3@localhost' ] }
+        {riak_node_list, [ {"127.0.0.1",8087}, {"127.0.0.1", 8088}, {"127.0.0.1", 8089} ] }
     ]}
 ]}.
