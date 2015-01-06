@@ -6,6 +6,5 @@
     {applications, [ ranch ] },
     {mod, {connector_app, [] } },
     {env, [
-        {riak_node_list, [ {"127.0.0.1",8087}, {"127.0.0.1", 8088}, {"127.0.0.1", 8089} ] }
     ]}
 ]}.
