@@ -3,9 +3,7 @@
     {vsn, "0.0.1"},
     {modules, [] },
     {registered, [game_sup]},
-    {applications, [gateway]},
-    {mod, {game_sup, [] } },
-    {env, [
-        
-    ]}
+    {applications, []},
+    {mod, {game_app, [] } },
+    {env, []}
 ]}.

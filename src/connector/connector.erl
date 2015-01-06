@@ -6,9 +6,10 @@
 
 -behaviour(gen_server).
 -behaviour(ranch_protocol).
+
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([init/4, start_link/4]).
--export([role_started/2, send_to_role/1, send_to_role/2]).
+-export([send_to_role/2]).
 
 start_link(Ref, Socket, Transport, Opts) ->
     proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts]).
@@ -47,14 +48,15 @@ handle_info({tcp,Socket,Data},Session) ->
                 _ ->
                     Session
             end,
-        Transport:setopts(Socket, [{active, once}])
+        Transport:setopts(Socket, [{active, once}]),
+        {noreply, NewSession1, ?TIMEOUT}
     catch
         Error:Reason ->
             error_logger:warning_msg( "Error in connector while decoding message with 
                                        Error:~w, Reason:~w, and stacktrace: ~w",
-                                      [ Error, Reason, erlang:get_stacktrace()] )
-    end,
-    {noreply, NewSession1, ?TIMEOUT};
+                                      [ Error, Reason, erlang:get_stacktrace()] ),
+            {noreply, Session, ?TIMEOUT}
+    end;
 handle_info({tcp_closed,_Socket}, Session) ->
     after_session_lost(Session),
     {stop, normal, Session};
@@ -91,7 +93,7 @@ decode(BinaryData) when erlang:is_binary(BinaryData) ->
     MessageString = erlang:binary_to_list(Message),
     ["cs", ModuleName | _Command ] = string:tokens( MessageString, "_"),    
     File = erlang:list_to_existing_atom(ModuleName ++ "_pb"),
-    Module = erlang:list_to_existing_atom(Module),
+    Module = erlang:list_to_existing_atom(ModuleName),
     MessageRecord = erlang:list_to_existing_atom(string:to_lower(MessageString)),
     {Module, File:decode(MessageRecord, Rest2)}.
 

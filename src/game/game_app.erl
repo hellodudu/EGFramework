@@ -1,21 +1,15 @@
-%%Author: Anthony Jiang <2nth0nyj@gmail.com>
-%% -*- coding: utf-8 -*-
-
 -module(game_app).
 -behaviour(application).
 -export([start/2, stop/1]).
 
--export([]).
-
 start(_Type, _StartArgs) ->
-    case game_sup:start_link(StartArgs) of
-		{ok, Pid} ->
-			{ok, Pid};
-		Error ->
-			Error
+    case game_sup:start_link() of
+        {ok, Pid} ->
+            {ok, Pid};
+        Error ->
+            Error
     end.
-
-stop(State) ->
+stop(_State) ->
     ok.
 
 

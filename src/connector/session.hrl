@@ -5,5 +5,5 @@
                    connector_pid,
                    role_id,
                    role_pid,
-                   riak_connection_pid,
+                   riak_connection_pid
                   } ).

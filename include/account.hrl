@@ -1,1 +1,1 @@
--record( db_account, {account_id, role_id} ).
+-record( account, {account_id, role_id} ).

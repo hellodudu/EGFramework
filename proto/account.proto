@@ -8,8 +8,8 @@ message sc_account_login{
 
 message cs_account_create_role{
     required int32 account_id = 1;
-    required string role_name = 2;
-    required int32 role_sex = 3;
+    required string name = 2;
+    required int32 sex = 3;
 }
 
 message sc_account_create_role{
