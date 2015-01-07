@@ -4,7 +4,12 @@
 -export([start_link/0]).
 
 start_link() ->
-    supervisor:start_link({global, ?MODULE}, ?MODULE, []).
+    case supervisor:start_link({global, ?MODULE}, ?MODULE, []) of
+        {ok, Pid} ->
+            {ok, Pid};
+        Error ->
+            Error
+    end.
 
 init([]) ->
     {ok,{{one_for_one,10,10}, []}}.
