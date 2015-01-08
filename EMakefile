@@ -1,0 +1,12 @@
+{"src/game/game_app.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
+{"src/game/game_sup.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
+{"src/game/role_sup.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
+{"src/game/role.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
+
+{"src/connector/connector_app.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
+{"src/connector/connector_sup.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
+{"src/connector/connector.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
+{"src/connector/account.erl",[{i, "include"},{outdir, "ebin"},strong_validation]}.
+
+
+
