@@ -11,7 +11,7 @@
 
 start_role(Session) when erlang:is_record(Session, session) ->
     RoleId = Session#session.role_id,
-    RoleChildSpec = {RoleId, 
+    RoleChildSpec = {RoleId,
                      {role, start_link, [Session]},
                      transient,
                      2000,
@@ -34,6 +34,8 @@ start_link(Session) when erlang:is_record(Session, session)->
 init([]) ->
     {ok, not_used};
 init(Session) when erlang:is_record(Session, session) ->
+    #session{connector_pid=ConnectorPid} = Session,
+    erlang:monitor(process, ConnectorPid),
     {ok, Session};
 init(Other) ->
     {ok, Other}.
@@ -45,6 +47,13 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
+handle_info(connector_down, Session) ->
+  {stop, normal, Session};
+
+handle_info({'DOWN',_MonitorRef,_Type, _Object, _Info},Session) ->
+    erlang:send_after(timer:minutes(5), connector_down),
+    {noreply,Session};
+
 handle_info(stop, State) ->
     {stop, normal, State};
 
@@ -52,6 +61,7 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(_Reason,_State) ->
+    %% recycle session resource here.
     ok.
 
 code_change(_OldVsn,State,_Extra) ->

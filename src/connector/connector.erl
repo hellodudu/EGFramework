@@ -1,5 +1,5 @@
 -module(connector).
--include("gateway.hrl").
+-include("connector.hrl").
 -include("account_pb.hrl").
 -include("role_pb.hrl").
 -include("session.hrl").
@@ -28,7 +28,7 @@ init(Ref, Socket, Transport, _Opts) ->
     ConnectorPid = erlang:self(),
     erlang:put(connector_pid, ConnectorPid),
     Session = #session{socket=Socket,transport=Transport,connector_pid=ConnectorPid},
-    gen_server:enter_loop(?MODULE, [], Session, ?TIMEOUT).
+    gen_server:enter_loop(?MODULE, [], Session, ?SESSION_TIMEOUT).
 
 handle_call(_Request, _From, Session) ->
     Reply = ok,
@@ -49,13 +49,13 @@ handle_info({tcp,Socket,Data},Session) ->
                     Session
             end,
         Transport:setopts(Socket, [{active, once}]),
-        {noreply, NewSession1, ?TIMEOUT}
+        {noreply, NewSession1, ?SESSION_TIMEOUT}
     catch
         Error:Reason ->
             error_logger:warning_msg( "Error in connector while decoding message with 
                                        Error:~w, Reason:~w, and stacktrace: ~w",
                                       [ Error, Reason, erlang:get_stacktrace()] ),
-            {noreply, Session, ?TIMEOUT}
+            {noreply, Session, ?SESSION_TIMEOUT}
     end;
 handle_info({tcp_closed,_Socket}, Session) ->
     after_session_lost(Session),
