@@ -20,10 +20,11 @@ handle({CsAccountLogin, Session}) when erlang:is_record(CsAccountLogin, cs_accou
                 {ok, RolePid} = start_role_process(Session),
                 #sc_account_login{ result = ?SUCCESS };
             {error, _ } ->
+                RolePid = undefined,
                 #sc_account_login{ result = ?ROLE_NOT_EXISTED }
         end,
     connector:send_to_role( ConnectorPid, ResponseRecord ),
-    NewSession = Session#session{account_id=AccountId,riak_connection_pid=RiakConnectionPid},
+    NewSession = Session#session{account_id=AccountId,role_pid=RolePid,riak_connection_pid=RiakConnectionPid},
     {ok, NewSession};
 
 handle({CsAccountCreateRole,Session}) when erlang:is_record(CsAccountCreateRole, cs_account_create_role) ->
@@ -50,7 +51,7 @@ establish_riak_connection() ->
     {ok, RiakConnectionPid } = riakc_pb_socket:start_link(Ip,Port),
     {ok, RiakConnectionPid }.
 
-start_role_process(Session) when erlang:is_reocrd(Session, session) ->
+start_role_process(Session) when erlang:is_record(Session,session) ->
     #session{role_id=RoleId}=Session,
     case global:whereis_name(RoleId) of
         Pid when erlang:is_pid(Pid) ->

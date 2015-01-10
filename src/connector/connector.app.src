@@ -3,7 +3,14 @@
     {vsn, "0.0.1"},
     {modules, [connector_app,connector_sup,connector, account]},
     {registered, [connector_sup]},
-    {applications, [ ranch ] },
+    {applications, [ ranch,lager ] },
     {mod, {connector_app, [] } },
-    {env, []}
-]}.
+    {env, [
+            {lager, [{handlers,[
+                        {lager_file_backend, [{file, "logs/error.log"}, {level, error}]},
+                        {lager_file_backend, [{file, "logs/info.log"}, {level, info}]}]
+                     }]}
+          ]
+    }
+]
+}.

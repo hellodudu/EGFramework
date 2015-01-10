@@ -1,11 +1,10 @@
-%% game node
-{"src/game/game_app.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
-{"src/game/game_sup.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
-{"src/game/role_sup.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
-{"src/game/role.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
 
-%%connector node
-{"src/connector/connector_app.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
-{"src/connector/connector_sup.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
-{"src/connector/connector.erl", [{i, "include"},{outdir, "ebin"},strong_validation]}.
-{"src/connector/account.erl",[{i, "include"},{outdir, "ebin"},strong_validation]}.
+{"src/game/game_app.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_tranform,lager_transform}]}.
+{"src/game/game_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_tranform,lager_transform}]}.
+{"src/game/role_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_tranform,lager_transform}]}.
+{"src/game/role.erl",     [verbose,report,{i, "include"},{outdir, "ebin"},{parse_tranform,lager_transform}]}.
+
+{"src/connector/connector_app.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_tranform,lager_transform}]}.
+{"src/connector/connector_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_tranform,lager_transform}]}.
+{"src/connector/connector.erl",     [verbose,report,{i, "include"},{outdir, "ebin"},{parse_tranform,lager_transform}]}.
+{"src/connector/account.erl",       [verbose,report,{i, "include"},{outdir, "ebin"},{parse_tranform,lager_transform}]}.

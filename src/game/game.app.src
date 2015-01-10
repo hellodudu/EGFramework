@@ -3,7 +3,12 @@
     {vsn, "0.0.1"},
     {modules, [] },
     {registered, [game_sup]},
-    {applications, []},
+    {applications, [lager]},
     {mod, {game_app, [] } },
-    {env, []}
+    {env, [
+            {lager, [{handlers,[
+                        {lager_file_backend, [{file, "logs/error.log"}, {level, error}]},
+                        {lager_file_backend, [{file, "logs/info.log"}, {level, info}]}]
+                     }]}
+    ]}
 ]}.
