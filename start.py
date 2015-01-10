@@ -7,9 +7,14 @@ import sys
 
 
 erl = "erl "
+f = file( "config/server.json" )
+s = json.load(f)
+f.close()
+serverId = s["server_id"]
+cookie = s["cookie"]
 
 def get_dependencies():
-    ebinList = [ '\'ebin\'' ]
+    ebinList = [ 'ebin' ]
     ebinStringPipe = os.popen( 'find deps -type d | grep ebin' )
     for line in ebinStringPipe:
         ebinList.append( line.strip('\n') )
@@ -17,6 +22,8 @@ def get_dependencies():
     for e in ebinList:
         dependencyDirectory += (' '+ e)
     return dependencyDirectory
+
+dependencies = get_dependencies()
 
 def build():
     dependencyDirectory = get_dependencies()
@@ -32,38 +39,37 @@ def build():
 
 def debug():
     dependencyDirectory = get_dependencies()
-    command = erl + '-pz ' + dependencyDirectory + ' -name debug@127.0.0.1'
+    command = erl + '-pz ' + dependencyDirectory + ' -name debug@127.0.0.1' + ' -setcookie ' + cookie
     os.system( command )
 
 
-def start():
-    f = file("config/server.json")
-    s = json.load(f)
-    f.close()
-    serverId = s["server_id"]
-    cookie = s["cookie"]
-
-####start connectors
+def start_connectors():
     connectorNodes = s['connector']
-    dependencies = get_dependencies()
     for node in connectorNodes:
-        id = node["id"]
-        host = node["host"]
-        port = node["port"]
-        command1 = erl + "-pa " + dependencies + " -detached -name '" + serverId + "_" + id + "@" + host + "\'"
-        command2 = "\'" + " -eval ok = application:ensure_all_started(connector) \'" + " -port " + str(port)
-        command = command1 + command2  
+        id = node['id']
+        host = node['host']
+        port = node['port']
+        nodeName = serverId+'_'+id+'@'+host
+        command1 = erl + '-setcookie ' + cookie + " -s lager" + " -pa " + dependencies + " -detached -name " + nodeName
+        command2 = "-eval \'application:ensure_all_started(connector)\' " + " -port " + str(port)
+        command = command1+command2
         os.system(command)
-####start game nodes
-    gameNodes = s["game"]
+
+def start_games():
+    gameNodes = s['game']
     for node in gameNodes:
         id = node['id']
         host = node['host']
-        command1 = erl + "-pa " + dependencies + " -detached -name '" + serverId + "_" + id + "@" + host + "\'"
-        command2 = "\'" + " -eval ok = application:start(game) \'"
+        nodeName = serverId+'_'+id+'@'+host
+        command1 = erl + '-setcookie ' + cookie + " -s lager" +" -pa " + dependencies + " -detached -name " + nodeName
+        command2 = " \'-eval application:start(game)\'"
         command = command1 + command2
-        os.system(command) 
+        os.system(command)
+    
 
+def start():
+    start_connectors()
+    start_games() 
 
 if __name__ == '__main__':
     try: 
@@ -74,6 +80,8 @@ if __name__ == '__main__':
             start()
         elif command == 'debug':
             debug()
+        elif command == 'stop':
+            stop()
         else:
             print( "illegal command: " + command )
     except IndexError:

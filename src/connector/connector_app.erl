@@ -16,7 +16,7 @@ start(_Type, _StartArgs) ->
                                    []),
     case connector_sup:start_link() of
         {ok, Pid} ->
-            %%register this connector to riak
+            lager:info("connector started on node: ~p with listening port: ~p", [erlang:node(), Port]),
             {ok, Pid};
         Error ->
             Error
