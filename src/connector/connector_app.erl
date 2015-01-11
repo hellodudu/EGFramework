@@ -20,14 +20,14 @@ start(_Type, _StartArgs) ->
     end,
     case connector_sup:start_link() of
         {ok, Pid} ->
-            error_logger:info_msg("Connector started on node ~p, listening on port ~p", [erlang:node(),Port]),
+            lager:info("Connector on node ~p, listening on port ~p", [erlang:node(),Port]),
             {ok, Pid};
         Error ->
             Error
     end.
 
 stop(State) ->
-    error_logger:info_msg( "Connector stopped at node ~p", [erlang:node()]),
+    lager:info( "Connector stopped at node ~p", [erlang:node()]),
     State.
 
 

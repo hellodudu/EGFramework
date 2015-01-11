@@ -37,6 +37,10 @@ def build():
                   done
               '''
     os.system( command )
+def rebuild():
+    command = ''' rm -fr ebin && mkdir ebin '''
+    os.system( command )
+    build()
 
 def debug():
     dependencyDirectory = get_dependencies()
@@ -51,7 +55,7 @@ def start_connectors():
         port = node['port']
         nodeName = serverId+'_'+id+'@'+host
         command1 = erl + '-setcookie ' + cookie + " -s lager" + " -pa " + dependencies + " -detached -name " + nodeName
-        command2 = " -port " + str(port) + " -eval \'\'application:ensure_all_started(connector).\'\' "
+        command2 = " -port " + str(port) + " -eval \'application:ensure_all_started(connector).\' "
         command = command1+command2
         os.system(command)
 
@@ -62,7 +66,7 @@ def start_games():
         host = node['host']
         nodeName = serverId+'_'+id+'@'+host
         command1 = erl + '-setcookie ' + cookie + " -s lager" +" -pa " + dependencies + " -detached -name " + nodeName
-        command2 = " -eval \'\'application:start(game).\'\'"
+        command2 = " -eval \'application:start(game).\'"
         command = command1 + command2
         os.system(command)
 
@@ -81,6 +85,8 @@ if __name__ == '__main__':
             debug()
         elif command == 'stop':
             stop()
+        elif command == 'rebuild':
+            rebuild()
         else:
             print( "illegal command: " + command )
     except IndexError:
