@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import json
 import sys
+import string
 
 
 erl = "erl "
@@ -39,9 +40,8 @@ def build():
 
 def debug():
     dependencyDirectory = get_dependencies()
-    command = erl + '-pz ' + dependencyDirectory + ' -name debug@127.0.0.1' + ' -setcookie ' + cookie
+    command = erl + '-pz ' + dependencyDirectory + ' -name debug@127.0.0.1' + ' -setcookie ' + cookie + " -hidden"
     os.system( command )
-
 
 def start_connectors():
     connectorNodes = s['connector']
@@ -51,7 +51,7 @@ def start_connectors():
         port = node['port']
         nodeName = serverId+'_'+id+'@'+host
         command1 = erl + '-setcookie ' + cookie + " -s lager" + " -pa " + dependencies + " -detached -name " + nodeName
-        command2 = "-eval \'application:ensure_all_started(connector)\' " + " -port " + str(port)
+        command2 = " -port " + str(port) + " -eval \'\'application:ensure_all_started(connector).\'\' "
         command = command1+command2
         os.system(command)
 
@@ -62,10 +62,9 @@ def start_games():
         host = node['host']
         nodeName = serverId+'_'+id+'@'+host
         command1 = erl + '-setcookie ' + cookie + " -s lager" +" -pa " + dependencies + " -detached -name " + nodeName
-        command2 = " \'-eval application:start(game)\'"
+        command2 = " -eval \'\'application:start(game).\'\'"
         command = command1 + command2
         os.system(command)
-    
 
 def start():
     start_connectors()
