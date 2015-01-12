@@ -13,3 +13,4 @@
 %tools
 {"src/tools/config_to_beam.erl",[verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
 {"src/tools/reloader.erl",[verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
+{"src/tools/user_default.erl",[verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
