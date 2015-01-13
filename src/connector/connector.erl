@@ -27,8 +27,10 @@ init(Ref, Socket, Transport, _Opts) ->
     ok = Transport:setopts(Socket, [{active, once}]),
     ConnectorPid = erlang:self(),
     erlang:put(connector_pid, ConnectorPid),
-    Session = #session{socket=Socket,transport=Transport,connector_pid=ConnectorPid},
-    lager:info("Session Established. Session=~p",[Session]),
+    Session = #session{socket=Socket,
+                       transport=Transport,
+                       connector_pid=ConnectorPid,
+                       session_state=?CONNECTED},
     gen_server:enter_loop(?MODULE, [], Session, ?SESSION_TIMEOUT).
 
 handle_call(_Request, _From, Session) ->
@@ -50,7 +52,7 @@ handle_info({tcp,Socket,Data},Session) ->
                 _ ->
                     Session
             end,
-        Transport:setopts(Socket, [{active, once}]),
+        Transport:setopts(Socket, [{active,once},{packet,2},{keepalive,true}]),
         {noreply, NewSession1, ?SESSION_TIMEOUT}
     catch
         Error:Reason ->
@@ -70,8 +72,9 @@ handle_info(timeout, Session) ->
     {stop, normal, Session};
 handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
     #session{socket=Socket, transport=Transport} = Session,
-    RepliedIOData = codec:encode(Record),
-    Transport:send(Socket, RepliedIOData);
+    IOData = codec:encode(Record),
+    Transport:send(Socket, IOData),
+    {noreply, Session};
 handle_info(_Info, Session) ->
     {noreply, Session}.
 

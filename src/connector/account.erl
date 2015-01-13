@@ -10,8 +10,8 @@
 -export([handle/1]).
 
 handle({CsAccountLogin, Session}) when erlang:is_record(CsAccountLogin, cs_account_login) ->
+    #session{connector_pid=ConnectorPid, session_state=?CONNECTED} = Session,
     #cs_account_login{account_id=AccountId} = CsAccountLogin,
-    #session{connector_pid=ConnectorPid} = Session,
     {ok, RiakConnectionPid} = establish_riak_connection(),
     Key = erlang:integer_to_binary(AccountId),
     ResponseRecord = 
@@ -24,7 +24,10 @@ handle({CsAccountLogin, Session}) when erlang:is_record(CsAccountLogin, cs_accou
                 #sc_account_login{ result = ?ROLE_NOT_EXISTED }
         end,
     connector:send_to_role( ConnectorPid, ResponseRecord ),
-    NewSession = Session#session{account_id=AccountId,role_pid=RolePid,riak_connection_pid=RiakConnectionPid},
+    NewSession = Session#session{account_id=AccountId,
+                                 role_pid=RolePid,
+                                 riak_connection_pid=RiakConnectionPid,
+                                 session_state=?LOGGED_IN},
     {ok, NewSession};
 
 handle({CsAccountCreateRole,Session}) when erlang:is_record(CsAccountCreateRole, cs_account_create_role) ->
@@ -45,7 +48,8 @@ handle({CsAccountCreateRole,Session}) when erlang:is_record(CsAccountCreateRole,
     {ok, NewSession2}.
 
 establish_riak_connection() ->
-    {ok, RiakNodeList} = server_config:get(riak_node_list),
+    %%todo get riak node list from configuration.
+    RiakNodeList = [{"127.0.0.1", 12001},{"127.0.0.1",12002}],
     RandomNode = lists:nth(random:uniform(erlang:length(RiakNodeList)),RiakNodeList),
     {Ip, Port} = RandomNode,
     {ok, RiakConnectionPid } = riakc_pb_socket:start_link(Ip,Port),
