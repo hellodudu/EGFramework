@@ -5,6 +5,7 @@ import os
 import json
 import sys
 import string
+import random
 
 
 erl = "erl "
@@ -49,7 +50,7 @@ def rebuild():
     build()
 
 def debug():
-    command = erl + '-pa ' + dependencies + ' -name debug@127.0.0.1' + ' -setcookie ' + cookie + " -hidden"
+    command = erl+'-pa '+dependencies+' -name debug'+str(int(random.uniform(1,20000)))+'@127.0.0.1'+' -setcookie '+cookie+" -hidden"
     os.system( command )
         
 def start_connectors():

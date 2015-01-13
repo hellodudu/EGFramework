@@ -1,21 +1,21 @@
 %%game
-{"src/game/game_app.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
-{"src/game/game_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
-{"src/game/role_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
-{"src/game/role.erl",     [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
+{"src/game/game_app.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
+{"src/game/game_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
+{"src/game/role_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
+{"src/game/role.erl",     [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
 
 %%connector
-{"src/connector/connector_app.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
-{"src/connector/connector_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
-{"src/connector/connector.erl",     [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
-{"src/connector/account.erl",       [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
+{"src/connector/connector_app.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
+{"src/connector/connector_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
+{"src/connector/connector.erl",     [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
+{"src/connector/account.erl",       [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
 
 %tools
-{"src/tools/config_to_beam.erl",[verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
-{"src/tools/reloader.erl",[verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform}]}.
+{"src/tools/config_to_beam.erl",[verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
+{"src/tools/reloader.erl",[verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
 {"src/tools/user_default.erl",[verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
-{"src/tools/client.erl",[verbose,report,{i,"include"},{outdir,"ebin"},{parse_transform,lager_transform}]}.
-{"src/tools/proto.erl" ,[verbose,report,{i,"include"},{outdir,"ebin"},{parse_transform,lager_transform}]}.
+{"src/tools/client.erl",[verbose,report,{i,"include"},{outdir,"ebin"},{parse_transform,lager_transform},debug_info]}.
+{"src/tools/proto.erl" ,[verbose,report,{i,"include"},{outdir,"ebin"},{parse_transform,lager_transform},debug_info]}.
 
 %lib
 {"src/lib/codec.erl", [verbose,report,{i,"include"},{outdir,"ebin"},{parse_transform, lager_transform}]}.

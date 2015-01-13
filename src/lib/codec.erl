@@ -11,14 +11,16 @@ encode(Record) when erlang:is_tuple(Record) ->
     [ _, ProtoFileName | _Command ] = string:tokens(RecordName, "_"),
     File = erlang:list_to_existing_atom(ProtoFileName ++ "_pb"),
     SerializedData = File:encode(Record),
+    SerializedDataBinary = erlang:iolist_to_binary(SerializedData),
     RecordNameLength = erlang:length(RecordName),
-    RecordNameLengthBinary = binary:encode_unsigned(RecordNameLength, big),
-    RepliedIOData = << RecordNameLengthBinary/binary, RecordNameBinary/binary, SerializedData/binary >>,
+    RepliedIOData = << RecordNameLength:1/big-unsigned-integer-unit:16, 
+                       RecordNameBinary/binary, 
+                       SerializedDataBinary/binary >>,
     RepliedIOData.
     
 
 decode(BinaryData) when erlang:is_binary(BinaryData) ->
-    <<MessageLength:1/big-signed-integer-unit:16, Rest1/binary>> = BinaryData,
+    <<MessageLength:1/big-unsigned-integer-unit:16, Rest1/binary>> = BinaryData,
     <<Message:MessageLength/bytes, Rest2/binary>> = Rest1,
     MessageString = erlang:binary_to_list(Message),
     [ _, ModuleName | _Command ] = string:tokens( MessageString, "_"),    

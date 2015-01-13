@@ -41,9 +41,8 @@ handle_cast(_Msg, Session) ->
 handle_info({tcp,Socket,Data},Session) ->
     try
         #session{socket=Socket, transport=Transport} = Session,
-        {Module, RequestRecord} = codec:decode(Data),
-        lager:info("Connector received module = ~p", [Module]),
-        lager:info("Connector received record = ~p",[RequestRecord]),
+        <<PacketLength:1/big-unsigned-integer-unit:16, BinaryData/binary >> = Data,
+        {Module, RequestRecord} = codec:decode(BinaryData),
         NewSession1 = 
             case route({Module,RequestRecord},Session) of
                 {ok, NewSession} when erlang:is_record(NewSession, session) ->
@@ -55,7 +54,7 @@ handle_info({tcp,Socket,Data},Session) ->
         {noreply, NewSession1, ?SESSION_TIMEOUT}
     catch
         Error:Reason ->
-            error_logger:warning_msg( "Error in connector while decoding message with 
+            lager:error( "Error in connector while decoding message with 
                                        Error:~w, Reason:~w, and stacktrace: ~w",
                                       [ Error, Reason, erlang:get_stacktrace()] ),
             {noreply, Session, ?SESSION_TIMEOUT}
