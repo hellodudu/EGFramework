@@ -27,8 +27,7 @@ def get_dependencies():
 dependencies = get_dependencies()
 
 def build():
-    dependencyDirectory = get_dependencies()
-    command = erl + '-pa ' + dependencyDirectory + ' -make'
+    command = erl + '-pa ' + dependencies + ' -make'
     os.system( command )
     command = '''for file in $(find src -type f -name "*.app.src"); 
                   do 
@@ -40,7 +39,6 @@ def build():
 
 
 def proto():
-    dependencies = get_dependencies()
     command = erl + '-pa ' + dependencies + ' -eval \'proto:compile_all()\''
     os.system(command)
 
@@ -51,10 +49,9 @@ def rebuild():
     build()
 
 def debug():
-    dependencyDirectory = get_dependencies()
-    command = erl + '-pa ' + dependencyDirectory + ' -name debug@127.0.0.1' + ' -setcookie ' + cookie + " -hidden"
+    command = erl + '-pa ' + dependencies + ' -name debug@127.0.0.1' + ' -setcookie ' + cookie + " -hidden"
     os.system( command )
-
+        
 def start_connectors():
     connectorNodes = s['connector']
     for node in connectorNodes:
