@@ -15,7 +15,7 @@ serverId = s["server_id"]
 cookie = s["cookie"]
 
 def get_dependencies():
-    ebinList = [ 'ebin' ]
+    ebinList = [ 'ebin/' ]
     ebinStringPipe = os.popen( 'find deps -type d | grep ebin' )
     for line in ebinStringPipe:
         ebinList.append( line.strip('\n') )
@@ -28,7 +28,7 @@ dependencies = get_dependencies()
 
 def build():
     dependencyDirectory = get_dependencies()
-    command = erl + '-pz ' + dependencyDirectory + ' -make'
+    command = erl + '-pa ' + dependencyDirectory + ' -make'
     os.system( command )
     command = '''for file in $(find src -type f -name "*.app.src"); 
                   do 
@@ -37,14 +37,22 @@ def build():
                   done
               '''
     os.system( command )
+
+
+def proto():
+    dependencies = get_dependencies()
+    command = erl + '-pa ' + dependencies + ' -eval \'proto:compile_all()\''
+    os.system(command)
+
 def rebuild():
     command = ''' rm -fr ebin && mkdir ebin '''
     os.system( command )
+    proto()
     build()
 
 def debug():
     dependencyDirectory = get_dependencies()
-    command = erl + '-pz ' + dependencyDirectory + ' -name debug@127.0.0.1' + ' -setcookie ' + cookie + " -hidden"
+    command = erl + '-pa ' + dependencyDirectory + ' -name debug@127.0.0.1' + ' -setcookie ' + cookie + " -hidden"
     os.system( command )
 
 def start_connectors():
@@ -87,6 +95,8 @@ if __name__ == '__main__':
             stop()
         elif command == 'rebuild':
             rebuild()
+        elif command == 'proto':
+            proto()
         else:
             print( "illegal command: " + command )
     except IndexError:

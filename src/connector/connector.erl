@@ -28,6 +28,7 @@ init(Ref, Socket, Transport, _Opts) ->
     ConnectorPid = erlang:self(),
     erlang:put(connector_pid, ConnectorPid),
     Session = #session{socket=Socket,transport=Transport,connector_pid=ConnectorPid},
+    lager:info("Session Established. Session=~p",[Session]),
     gen_server:enter_loop(?MODULE, [], Session, ?SESSION_TIMEOUT).
 
 handle_call(_Request, _From, Session) ->
@@ -40,7 +41,9 @@ handle_cast(_Msg, Session) ->
 handle_info({tcp,Socket,Data},Session) ->
     try
         #session{socket=Socket, transport=Transport} = Session,
-        {Module, RequestRecord} = decode(Data),
+        {Module, RequestRecord} = codec:decode(Data),
+        lager:info("Connector received module = ~p", [Module]),
+        lager:info("Connector received record = ~p",[RequestRecord]),
         NewSession1 = 
             case route({Module,RequestRecord},Session) of
                 {ok, NewSession} when erlang:is_record(NewSession, session) ->
@@ -67,16 +70,8 @@ handle_info(timeout, Session) ->
     after_session_lost(Session),
     {stop, normal, Session};
 handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
-    RecordNameAtom = erlang:element(1, Record),
-    RecordName = erlang:atom_to_list(RecordNameAtom),
-    RecordNameBinary = erlang:list_to_binary(RecordName),
-    [ "sc", ProtoFileName | _Command ] = string:tokens(RecordName, "_"),
-    File = erlang:list_to_existing_atom(ProtoFileName ++ "_pb"),
-    SerializedData = File:encode(Record),
-    RecordNameLength = erlang:length(RecordName),
-    RecordNameLengthBinary = binary:encode_unsigned(RecordNameLength, little),
-    RepliedIOData = << RecordNameLengthBinary/binary, RecordNameBinary/binary, SerializedData/binary >>,
     #session{socket=Socket, transport=Transport} = Session,
+    RepliedIOData = codec:encode(Record),
     Transport:send(Socket, RepliedIOData);
 handle_info(_Info, Session) ->
     {noreply, Session}.
@@ -86,16 +81,6 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
-decode(BinaryData) when erlang:is_binary(BinaryData) ->
-    <<MessageLength:1/little-signed-integer-unit:16, Rest1/binary>> = BinaryData,
-    <<Message:MessageLength/bytes, Rest2/binary>> = Rest1,
-    MessageString = erlang:binary_to_list(Message),
-    ["cs", ModuleName | _Command ] = string:tokens( MessageString, "_"),    
-    File = erlang:list_to_existing_atom(ModuleName ++ "_pb"),
-    Module = erlang:list_to_existing_atom(ModuleName),
-    MessageRecord = erlang:list_to_existing_atom(string:to_lower(MessageString)),
-    {Module, File:decode(MessageRecord, Rest2)}.
 
 route({Module,RequestRecord}, Session) ->
     %% first try to route to player process,
