@@ -24,7 +24,7 @@ init([]) -> {ok, #session{} }.
 init(Ref, Socket, Transport, _Opts) ->
     ok = proc_lib:init_ack({ok, self()}),
     ok = ranch:accept_ack(Ref),
-    ok = Transport:setopts(Socket, [{active, once}]),
+    ok = Transport:setopts(Socket, [{active, once},{packet,2},{keepalive,true}]),
     ConnectorPid = erlang:self(),
     erlang:put(connector_pid, ConnectorPid),
     Session = #session{socket=Socket,
@@ -42,9 +42,10 @@ handle_cast(_Msg, Session) ->
 
 handle_info({tcp,Socket,Data},Session) ->
     try
-        #session{socket=Socket, transport=Transport} = Session,
-        <<PacketLength:1/big-unsigned-integer-unit:16, BinaryData/binary >> = Data,
+        #session{socket=Socket, transport=Transport,connector_pid=ConnectorPid} = Session,
+        BinaryData = erlang:iolist_to_binary(Data),
         {Module, RequestRecord} = codec:decode(BinaryData),
+        lager:debug("Decoded Module:~p, RequestRecord:~p", [Module, RequestRecord]),
         NewSession1 = 
             case route({Module,RequestRecord},Session) of
                 {ok, NewSession} when erlang:is_record(NewSession, session) ->
@@ -73,6 +74,7 @@ handle_info(timeout, Session) ->
 handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
     #session{socket=Socket, transport=Transport} = Session,
     IOData = codec:encode(Record),
+    lager:debug("Server Response Record:~p",[Record]),
     Transport:send(Socket, IOData),
     {noreply, Session};
 handle_info(_Info, Session) ->

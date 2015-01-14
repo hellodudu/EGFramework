@@ -14,7 +14,8 @@ start(_Type, _StartArgs) ->
                                    [{port,Port},
                                     {active, once}, 
                                     {packet,2},
-                                    {reuseaddr,true}], 
+                                    {reuseaddr,true},
+                                    {keepalive,true}], 
                                    connector, 
                                    []) of
         {ok,_ } -> pass;
