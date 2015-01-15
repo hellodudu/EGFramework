@@ -4,7 +4,7 @@
 
 -export([start_link/0]).
 start_link() ->
-    supervisor:start_link({global, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
     RoleSupervisor = {role_sup,{role_sup,start_link,[]},

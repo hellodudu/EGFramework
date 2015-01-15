@@ -18,14 +18,26 @@ start_role(Session) when erlang:is_record(Session, session) ->
                      worker,
                      [role]
                      },
-    supervisor:start_child({global,role_sup}, RoleChildSpec).
+    case supervisor:start_child(role_sup, RoleChildSpec) of
+        {ok, ChildPid} when erlang:is_pid(ChildPid) -> 
+            ok;
+        {ok, ChildPid,_ChildInfo} when erlang:is_pid(ChildPid) -> 
+            ok;
+        {error,{already_started,ChildPid}} when erlang:is_pid(ChildPid) -> 
+            erlang:send(ChildPid, reconnected),
+            ok;
+        {error,already_present} -> 
+            supervisor:delete_child(role_sup, RoleId),
+            start_role(Session)
+    end.
+    %%supervisor is locally registered, player logic process is globally registered.
 
 stop_role(RoleId) ->
-    supervisor:terminate_child({global, role_sup}, RoleId),
-    supervisor:delete_child({global, role_sup}, RoleId).
+    supervisor:terminate_child(role_sup, RoleId),
+    supervisor:delete_child(role_sup, RoleId).
 
 restart_role(RoleId) ->
-    supervisor:restart_child({global,role_sup}, RoleId).
+    supervisor:restart_child(role_sup, RoleId).
 
 start_link(Session) when erlang:is_record(Session, session)->
     RoleId = Session#session.role_id,
@@ -47,11 +59,17 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
+handle_info(reconnected, Session) ->
+    TimerRef = erlang:erase(timer_ref),
+    erlang:cancel_timer(TimerRef),
+    {noreply, Session};
+
 handle_info(connector_down, Session) ->
-  {stop, normal, Session};
+    {stop, normal, Session};
 
 handle_info({'DOWN',_MonitorRef,_Type, _Object, _Info},Session) ->
-    erlang:send_after(timer:minutes(5), connector_down),
+    TimerRef = erlang:send_after(timer:seconds(30), erlang:self(), connector_down),
+    erlang:put(timer_ref, TimerRef),
     {noreply,Session};
 
 handle_info(stop, State) ->

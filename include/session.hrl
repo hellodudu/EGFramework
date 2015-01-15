@@ -8,7 +8,7 @@
                    transport,
                    connector_pid,
                    role_id,
-                   role_pid,
-                   riak_connection_pid,
+                   riak_mem,
+                   riak_db,
                    session_state = ?DISCONNECTED
                   } ).

@@ -1,7 +1,8 @@
 {application, game, [
     {description, "Game logic application."},
     {vsn, "0.0.1"},
-    {modules, [game_app,game_sup,role_sup,role,role_pb
+    {modules, [game_app,game_sup,
+               role_sup,role,role_pb,
                account,account_pb] },
     {registered, [game_sup]},
     {applications, []},

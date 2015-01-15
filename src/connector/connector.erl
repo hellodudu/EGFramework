@@ -57,7 +57,7 @@ handle_info({tcp,Socket,Data},Session) ->
         {noreply, NewSession1, ?SESSION_TIMEOUT}
     catch
         Error:Reason ->
-            lager:error( "Error in connector while decoding message with 
+            lager:error( "Error in connector while handling message with 
                                        Error:~w, Reason:~w, and stacktrace: ~w",
                                       [ Error, Reason, erlang:get_stacktrace()] ),
             {noreply, Session, ?SESSION_TIMEOUT}
@@ -80,7 +80,8 @@ handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
 handle_info(_Info, Session) ->
     {noreply, Session}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, Session) ->
+    lager:debug("Session:~p TERMINATED!", [Session]),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -89,18 +90,20 @@ code_change(_OldVsn, State, _Extra) ->
 route({Module,RequestRecord}, Session) ->
     %% first try to route to player process,
     %% if failed, handle it here in connector process.
-    #session{connector_pid=ConnectorPid, role_pid=RolePid} = Session,
+    #session{connector_pid=ConnectorPid, role_id=RoleId} = Session,
+    RolePid = global:whereis_name(RoleId),
     if
         erlang:is_pid(RolePid) -> erlang:send(RolePid, {RequestRecord, Session});
         true ->
             if
                 erlang:is_pid(ConnectorPid) -> Module:handle({RequestRecord, Session});
-                true -> erlang:error( no_process_to_handle_request )
+                true -> erlang:error( no_process_to_handle_this_request )
             end
     end.
 
 after_session_lost(Session) ->
-    RolePid = Session#session.role_pid,
+    RoleId = Session#session.role_id,
+    RolePid = global:whereis_name(RoleId),
     if
         erlang:is_pid( RolePid ) -> erlang:send( RolePid, connection_lost );
         true -> ignore

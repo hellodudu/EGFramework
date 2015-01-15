@@ -4,7 +4,7 @@
 -export([start_link/0]).
 
 start_link() ->
-    case supervisor:start_link({global, ?MODULE}, ?MODULE, []) of
+    case supervisor:start_link({local, ?MODULE}, ?MODULE, []) of
         {ok, Pid} ->
             {ok, Pid};
         Error ->

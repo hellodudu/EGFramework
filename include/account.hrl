@@ -1,1 +1,1 @@
--record( account, {account_id, role_id} ).
+-record( account, {account_id, role_id_list} ).
