@@ -11,7 +11,8 @@ compile_all() ->
                                    CompilingFile = "proto/"++File,
                                    protobuffs_compile:scan_file(CompilingFile, 
                                                                 [{output_ebin_dir, "ebin"},
-                                                                 {output_include_dir, "include"}]);
+                                                                 {output_include_dir, "include"},
+                                                                 {imports_dir, ["proto"]}]);
                                _ ->
                                    ignore
                            end
@@ -33,8 +34,9 @@ compile() ->
                                       true ->
                                           CompilingFile = "proto/"++SourceFile,
                                           protobuffs_compile:scan_file(CompilingFile, 
-                                                                       [{output_ebin_dir, "ebin"}, 
-                                                                        {output_include_dir, "include"}]);
+                                                                       [{output_ebin_dir, "ebin"},
+                                                                        {output_include_dir, "include"},
+                                                                        {imports_dir,["proto"]}]);
                                       _ ->
                                           ignore
                                   end;
