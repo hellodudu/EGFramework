@@ -31,7 +31,8 @@ handle({CsAccountLogin, Session}) when erlang:is_record(CsAccountLogin, cs_accou
     {ok, NewSession};
 
 handle({CsAccountCreateRole,Session}) when erlang:is_record(CsAccountCreateRole, cs_account_create_role) ->
-    #session{account_id = AccountId, connector_pid=ConnectorPid, 
+    #session{account_id = AccountId,
+             connector_pid=ConnectorPid, 
              riak_db = RiakDb,
              session_state=?LOGGED_IN} = Session,
     #cs_account_create_role{account_id = AccountId, name = RoleName,sex = RoleSex} = CsAccountCreateRole,
@@ -53,7 +54,35 @@ handle({CsAccountCreateRole,Session}) when erlang:is_record(CsAccountCreateRole,
     riakc_pb_socket:put(RiakDb,AccountObject),
     ResponseRecord = #sc_account_create_role{result=?SUCCESS, role_id_list=NewAccountRoleIdList},
     connector:send_to_role(ConnectorPid, ResponseRecord),
-    {ok, Session}.
+    {ok, Session};
+
+handle({CsAccountGetRole,Session}) when erlang:is_record(CsAccountGetRole,cs_account_get_role) ->
+    #cs_account_get_role{role_id=RoleId} = CsAccountGetRole,
+    RoleIdBinary = erlang:iolist_to_binary(RoleId),
+    #session{account_id=_AccountId, riak_db=RiakDb,connector_pid=ConnectorPid, session_state=?LOGGED_IN} = Session,
+    AccountRecord = get_account_record(Session),
+    RoleIdList = AccountRecord#account.role_id_list,
+    ScAccountGetRole = 
+        case lists:member(RoleIdBinary, RoleIdList) of
+            false ->
+                #sc_account_get_role{result=?ROLE_NOT_YOURS};
+            true ->
+                case riakc_pb_socket:get(RiakDb,<<"role">>,RoleIdBinary) of
+                    {ok, RoleObject} ->
+                        RoleObjectValue = riakc_obj:get_value(RoleObject),
+                        RoleRecord = erlang:binary_to_term(RoleObjectValue),
+                        #role{name=Name,sex=Sex,level=Level} = RoleRecord,
+                        RoleInfo = #role_info{role_id=RoleIdBinary,name=Name,sex=Sex,level=Level},
+                        #sc_account_get_role{result=?SUCCESS,role=RoleInfo};
+                    _ ->
+                        #sc_account_get_role{result=?ROLE_NOT_EXISTED}
+                end
+        end,
+    connector:send_to_role(ConnectorPid,ScAccountGetRole),
+    ok.
+    
+    
+    
 
 establish_riak_connection() ->
     RiakNodeList = [{"127.0.0.1", 12001},{"127.0.0.1",12002}],%%todo get riak node list from configuration.
@@ -75,6 +104,8 @@ get_account_record(RiakDb, AccountId) when erlang:is_integer(AccountId) ->
         {error, _ } ->
             not_existed
     end.
+
+
 
 %% start_role_process(Session) when erlang:is_record(Session,session) ->
 %% #session{role_id=RoleId}=Session,
