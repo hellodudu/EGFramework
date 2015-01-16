@@ -46,6 +46,9 @@ start_role(from_connector,RoleRecord) when erlang:is_record(RoleRecord,role)->
     end.
     %%supervisor is locally registered, player logic process is globally registered.
 
+stop_role(RoleRecord) when erlang:is_record(RoleRecord, role) ->
+    #role{role_id=RoleId} = RoleRecord,
+    stop_role(RoleId);
 stop_role(RoleId) ->
     supervisor:terminate_child(role_sup, RoleId),
     supervisor:delete_child(role_sup, RoleId).
@@ -77,22 +80,35 @@ handle_info(reconnected, Role) ->
     erlang:cancel_timer(TimerRef),
     {noreply, Role#role{reconnectionTimer=undefined}};
 
-handle_info(connector_down, Session) ->
-    {stop, normal, Session};
+handle_info(connector_down, Role) ->
+    prepare_to_stop_role(Role),
+    {stop, normal, Role};
 
 handle_info({'DOWN',_MonitorRef,_Type, _Object, _Info},Role) ->
     TimerRef = erlang:send_after(timer:seconds(30), erlang:self(), connector_down),
     {noreply,Role#role{reconnectionTimer=TimerRef}};
 
-handle_info(stop, State) ->
-    {stop, normal, State};
+handle_info(stop, Role) ->
+    {stop, normal, Role};
 
-handle_info(_Info, State) ->
-    {noreply, State}.
+handle_info(_Info, Role) ->
+    {noreply, Role}.
 
-terminate(_Reason,_State) ->
+terminate(normal,Role) ->
     %% recycle session resource here.
+    #role{role_id=RoleId} = Role,
+    case RoleId of
+        undefined -> pass;
+        _Else -> 
+            RoleIdBinary = erlang:iolist_to_binary(RoleId),
+            supervisor:delete_child(role_sup,RoleIdBinary)
+    end,
+    ok;
+terminate(_Reason,_Role) ->
     ok.
 
 code_change(_OldVsn,State,_Extra) ->
     {ok, State}.
+
+
+prepare_to_stop_role(_Role) -> ok.

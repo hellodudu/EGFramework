@@ -82,7 +82,7 @@ handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
 handle_info(_Info, Session) ->
     {noreply, Session}.
 
-terminate(_Reason, Session) ->
+terminate(_Reason, _Session) ->
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
