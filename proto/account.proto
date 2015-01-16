@@ -6,7 +6,6 @@ message cs_account_login{
 
 message sc_account_login{
     required  int32  result = 1;
-    repeated  string role_id_list = 2;
 }
 
 message cs_account_create_role{
@@ -16,6 +15,14 @@ message cs_account_create_role{
 }
 
 message sc_account_create_role{
+    required int32 result = 1;
+    repeated string role_id_list = 2;
+}
+
+message cs_account_get_role_id_list{
+}
+
+message sc_account_get_role_id_list{
     required int32 result = 1;
     repeated string role_id_list = 2;
 }
@@ -30,7 +37,11 @@ message sc_account_get_role{
 }
 
 message cs_account_enter_game{
-    required int32 account_id = 1;
-    required string role_id = 2;
+    required string role_id = 1;
+}
+
+message sc_account_enter_game{
+    required int32 result = 1;
+    //put various game info here.
 }
 

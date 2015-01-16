@@ -14,6 +14,9 @@
 start_link(Ref, Socket, Transport, Opts) ->
     proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts]).
 
+send_to_role(Session, Response) when erlang:is_record(Session,session) ->
+    #session{connector_pid=ConnectorPid} = Session,
+    send_to_role(ConnectorPid,Response);
 send_to_role(ConnectorPid, Response) when erlang:is_pid(ConnectorPid) ->
     erlang:send( ConnectorPid, {response, Response} );
 send_to_role(ConnectorPid, {response, Response}) when erlang:is_pid(ConnectorPid)->
@@ -45,7 +48,6 @@ handle_info({tcp,Socket,Data},Session) ->
         #session{socket=Socket, transport=Transport,connector_pid=ConnectorPid} = Session,
         BinaryData = erlang:iolist_to_binary(Data),
         {Module, RequestRecord} = codec:decode(BinaryData),
-        lager:debug("Decoded Module:~p, RequestRecord:~p", [Module, RequestRecord]),
         NewSession1 = 
             case route({Module,RequestRecord},Session) of
                 {ok, NewSession} when erlang:is_record(NewSession, session) ->
@@ -81,7 +83,6 @@ handle_info(_Info, Session) ->
     {noreply, Session}.
 
 terminate(_Reason, Session) ->
-    lager:debug("Session:~p TERMINATED!", [Session]),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -93,7 +94,8 @@ route({Module,RequestRecord}, Session) ->
     #session{connector_pid=ConnectorPid, role_id=RoleId} = Session,
     RolePid = global:whereis_name(RoleId),
     if
-        erlang:is_pid(RolePid) -> erlang:send(RolePid, {RequestRecord, Session});
+        erlang:is_pid(RolePid) -> 
+            erlang:send(RolePid, {RequestRecord, Session});
         true ->
             if
                 erlang:is_pid(ConnectorPid) -> Module:handle({RequestRecord, Session});

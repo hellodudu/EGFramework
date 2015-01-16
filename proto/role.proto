@@ -3,7 +3,7 @@ message cs_role_get_info {
 }
 
 message role_info {
-    optional int32 role_id = 1;
+    optional string role_id = 1;
     optional string name = 2;
     optional int32 sex = 3;
     optional int32 level = 4;

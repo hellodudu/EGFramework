@@ -6,10 +6,6 @@
                 level,
                 diamond,
                 
-                runtime
+                session,
+                reconnectionTimer
   } ).
-
--record(role_runtime, {
-                       session,
-                       reconnectionTimer
-                       }).
