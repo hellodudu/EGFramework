@@ -27,6 +27,18 @@ def get_dependencies():
 
 dependencies = get_dependencies()
 
+def generate_pb_list():
+    files = os.listdir("proto")
+    r = ""
+    for file in files:
+        file = file.split('.')
+        name,extension = file
+        name += '_pb'
+        r += str((name+','))
+    return r
+
+pb_list = generate_pb_list()
+
 def build():
     command = erl + '-pa ' + dependencies + ' -make'
     os.system( command )
@@ -50,7 +62,7 @@ def rebuild():
     build()
 
 def debug():
-    command = erl+'-pa '+dependencies+' -name debug'+str(int(random.uniform(1,20000)))+'@127.0.0.1'+' -setcookie '+cookie+" -hidden"
+    command = erl+'-pa '+dependencies+' -name debug'+str(int(random.uniform(1,20000)))+'@127.0.0.1'+' -setcookie '+cookie+" -hidden" + " -eval \'" + pb_list + "ok\'"
     os.system( command )
         
 def start_connectors():
@@ -61,7 +73,7 @@ def start_connectors():
         port = node['port']
         nodeName = serverId+'_'+id+'@'+host
         command1 = erl + '-setcookie ' + cookie + " -s lager" + " -pa " + dependencies + " -detached -name " + nodeName
-        command2 = " -port " + str(port) + " -eval \'application:ensure_all_started(connector).\' "
+        command2 = " -port " + str(port) + " -eval \'" + pb_list+ " application:ensure_all_started(connector).\' "
         command = command1+command2
         os.system(command)
 
@@ -72,7 +84,7 @@ def start_games():
         host = node['host']
         nodeName = serverId+'_'+id+'@'+host
         command1 = erl + '-setcookie ' + cookie + " -s lager" +" -pa " + dependencies + " -detached -name " + nodeName
-        command2 = " -eval \'application:start(game).\'"
+        command2 = " -eval \'" + pb_list+ "application:start(game).\'"
         command = command1 + command2
         os.system(command)
 
