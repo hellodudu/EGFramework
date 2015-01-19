@@ -15,37 +15,56 @@ handle({CsAccountLogin, Session}) when erlang:is_record(CsAccountLogin, cs_accou
                                                               %% fetch account profile from 
                                                               %% another account server using a string token.
                                                               %% for simplicity, just assume that the account id is ok here.
-    {ok, RiakDb} = establish_riak_connection(),
-    NewSession = Session#session{account_id=AccountId,riak_db=RiakDb,session_state=?LOGGED_IN},
+    global:register_name(AccountId,erlang:self()),            %% register account id as connector identifier
+    {ok, RiakDb} = establish_riak_connection(disk),
+    {ok, RiakMem} = establish_riak_connection(memory),
+    NewSession = Session#session{account_id=AccountId,
+                                 riak_db=RiakDb,
+                                 riak_mem=RiakMem,
+                                 session_state=?LOGGED_IN},
     connector:send_to_role(Session, #sc_account_login{result=?SUCCESS}),
     {ok, NewSession};
 
 handle({CsAccountCreateRole,Session}) when erlang:is_record(CsAccountCreateRole, cs_account_create_role) ->
     #session{account_id = AccountId,
-             connector_pid=ConnectorPid, 
              riak_db = RiakDb,
              session_state=?LOGGED_IN} = Session,
-    #cs_account_create_role{account_id = AccountId, name = RoleName,sex = RoleSex} = CsAccountCreateRole,
-    RoleRecord = #role{role_id=undefined,account_id=AccountId,name=RoleName,sex=RoleSex,level=1,diamond=20},
-    RoleObject = riakc_obj:new(<<"role">>,undefined,erlang:term_to_binary(RoleRecord)),
-    {ok, StoredRoleObject} = riakc_pb_socket:put(RiakDb,RoleObject),
-    RoleId = riakc_obj:key(StoredRoleObject),
-    RoleObjectWithKey = riakc_obj:update_value(StoredRoleObject,RoleRecord#role{role_id=RoleId}),
-    riakc_pb_socket:put(RiakDb,RoleObjectWithKey),
     AccountRecord = 
         case get_account_record(Session) of
             AccountRecord1 when erlang:is_record(AccountRecord1, account) -> AccountRecord1;
             not_existed -> #account{account_id=AccountId,role_id_list=[]}
         end,
-    AccountRoleKeys = AccountRecord#account.role_id_list,
-    NewAccountRoleIdList = [RoleId|AccountRoleKeys],
-    NewAccountRecord = #account{account_id = AccountId, role_id_list = NewAccountRoleIdList},
-    AccountObject = riakc_obj:new(<<"account">>, 
-                                  erlang:integer_to_binary(AccountId), 
-                                  erlang:term_to_binary(NewAccountRecord)),
-    riakc_pb_socket:put(RiakDb,AccountObject),
-    ResponseRecord = #sc_account_create_role{result=?SUCCESS, role_id_list=NewAccountRoleIdList},
-    connector:send_to_role(ConnectorPid, ResponseRecord),
+    #account{role_id_list=AccountRoleKeys, max_allowd_role_num = MaxAllowdRoleNum} = AccountRecord,
+    ScAccountCreateRole =
+        case (erlang:length(AccountRoleKeys) < MaxAllowdRoleNum) of
+            true ->
+                #cs_account_create_role{account_id = AccountId, 
+                                        name = RoleName,
+                                        sex = RoleSex} = CsAccountCreateRole,
+                RoleRecord = #role{role_id=undefined,
+                                   account_id=AccountId,
+                                   name=RoleName,
+                                   sex=RoleSex,
+                                   level=1,
+                                   diamond=20},
+                RoleObject = riakc_obj:new(?ROLE_BUCKET,
+                                           undefined,
+                                           erlang:term_to_binary(RoleRecord)),
+                {ok, StoredRoleObject} = riakc_pb_socket:put(RiakDb,RoleObject),
+                RoleId = riakc_obj:key(StoredRoleObject),
+                RoleObjectWithKey = riakc_obj:update_value(StoredRoleObject,RoleRecord#role{role_id=RoleId}),
+                riakc_pb_socket:put(RiakDb,RoleObjectWithKey),
+                NewAccountRoleIdList = [RoleId|AccountRoleKeys],
+                NewAccountRecord = #account{account_id = AccountId, role_id_list = NewAccountRoleIdList},
+                AccountObject = riakc_obj:new(?ACCOUNT_BUCKET, 
+                                              erlang:integer_to_binary(AccountId), 
+                                              erlang:term_to_binary(NewAccountRecord)),
+                riakc_pb_socket:put(RiakDb,AccountObject),
+                #sc_account_create_role{result=?SUCCESS, role_id_list=NewAccountRoleIdList};
+            false ->
+                #sc_account_create_role{result=?ROLE_MAX_NUM_CREATED}
+        end,
+    connector:send_to_role(Session, ScAccountCreateRole),
     {ok, Session};
 
 handle({CsAccountGetRoleIdList, Session}) when erlang:is_record(CsAccountGetRoleIdList,cs_account_get_role_id_list) ->
@@ -115,19 +134,25 @@ handle({CsAccountEnterGame, Session}) when erlang:is_record(CsAccountEnterGame,c
     connector:send_to_role(Session, ScAccountEnterGame),
     {ok, NewSession}.
 
-establish_riak_connection() ->
+establish_riak_connection(disk) ->
     RiakNodeList = [{"127.0.0.1", 12001},{"127.0.0.1",12002}],%%todo get riak node list from configuration.
     RandomNode = lists:nth(random:uniform(erlang:length(RiakNodeList)),RiakNodeList),
     {Ip, Port} = RandomNode,
-    {ok, RiakConnectionPid } = riakc_pb_socket:start_link(Ip,Port),
-    {ok, RiakConnectionPid }.
+    {ok, RiakDb } = riakc_pb_socket:start_link(Ip,Port),
+    {ok, RiakDb };
+establish_riak_connection(memory) ->
+    RiakNodeList = [{"127.0.0.1", 13001}],
+    RandomNode = lists:nth(random:uniform(erlang:length(RiakNodeList)),RiakNodeList),
+    {Ip,Port} = RandomNode,
+    {ok, RiakMem} = riakc_pb_socket:start_link(Ip,Port),
+    {ok, RiakMem}.
 
 get_account_record(Session) when erlang:is_record(Session,session) ->
     #session{account_id=AccountId,riak_db=RiakDb} = Session,
     get_account_record(RiakDb,AccountId).
 get_account_record(RiakDb, AccountId) when erlang:is_integer(AccountId) ->
     AccountIdBinary = erlang:integer_to_binary(AccountId),
-    case riakc_pb_socket:get(RiakDb,<<"account">>,AccountIdBinary) of
+    case riakc_pb_socket:get(RiakDb,?ACCOUNT_BUCKET,AccountIdBinary) of
         {ok, AccountObject} ->
             AccountObjectValue = riakc_obj:get_value(AccountObject),
             AccountRecord = erlang:binary_to_term(AccountObjectValue),
@@ -138,7 +163,7 @@ get_account_record(RiakDb, AccountId) when erlang:is_integer(AccountId) ->
 
 get_role_record(RiakDb,RoleId) ->
     RoleIdBinary = erlang:iolist_to_binary(RoleId),
-    case riakc_pb_socket:get(RiakDb, <<"role">>, RoleIdBinary) of
+    case riakc_pb_socket:get(RiakDb, ?ROLE_BUCKET, RoleIdBinary) of
         {ok, RoleObject} ->
             RoleObjectValue = riakc_obj:get_value(RoleObject),
             RoleRecord = erlang:binary_to_term(RoleObjectValue),

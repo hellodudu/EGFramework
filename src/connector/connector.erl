@@ -14,6 +14,13 @@
 start_link(Ref, Socket, Transport, Opts) ->
     proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts]).
 
+send_to_role(AccountId, Response) when erlang:is_integer(AccountId) ->
+    case global:whereis_name(AccountId) of
+        Pid when erlang:is_pid(Pid) ->
+            erlang:send(Pid, {response,Response});
+        _ -> 
+            {error, account_not_online}
+    end;
 send_to_role(Session, Response) when erlang:is_record(Session,session) ->
     #session{connector_pid=ConnectorPid} = Session,
     send_to_role(ConnectorPid,Response);
@@ -82,7 +89,13 @@ handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
 handle_info(_Info, Session) ->
     {noreply, Session}.
 
-terminate(_Reason, _Session) ->
+terminate(_Reason, Session) ->
+    #session{account_id=AccountId} = Session,
+    case AccountId of
+        undefined -> pass;
+        AccountId when erlang:is_integer(AccountId) ->
+            global:unregister_name(AccountId)
+    end,
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -95,7 +108,7 @@ route({Module,RequestRecord}, Session) ->
     RolePid = global:whereis_name(RoleId),
     if
         erlang:is_pid(RolePid) -> 
-            erlang:send(RolePid, {RequestRecord, Session});
+            erlang:send(RolePid, {Module,RequestRecord, Session});
         true ->
             if
                 erlang:is_pid(ConnectorPid) -> Module:handle({RequestRecord, Session});

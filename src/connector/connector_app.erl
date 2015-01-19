@@ -15,7 +15,8 @@ start(_Type, _StartArgs) ->
                                     {active, once}, 
                                     {packet,2},
                                     {reuseaddr,true},
-                                    {keepalive,true}], 
+                                    {keepalive,true},
+                                    {max_connections,256}], 
                                    connector, 
                                    []) of
         {ok,_ } -> pass;
