@@ -3,7 +3,7 @@
 {"src/game/game_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
 {"src/game/role_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
 {"src/game/role.erl",     [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
-
+{"src/game/chat.erl",     [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
 %%connector
 {"src/connector/connector_app.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.
 {"src/connector/connector_sup.erl", [verbose,report,{i, "include"},{outdir, "ebin"},{parse_transform,lager_transform},debug_info]}.

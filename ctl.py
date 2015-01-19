@@ -33,8 +33,9 @@ def generate_pb_list():
     for file in files:
         file = file.split('.')
         name,extension = file
-        name += '_pb'
-        r += str((name+','))
+        pb_name = (name+"_pb")
+        load_pb = "code:load_file("+pb_name+")"
+        r += ( name + "," +load_pb+"," )
     return r
 
 pb_list = generate_pb_list()

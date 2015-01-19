@@ -10,16 +10,8 @@
 -include("session.hrl").
 
 -behavoir(gen_server).
--export([init/1,
-         handle_call/3,
-         handle_cast/2,
-         handle_info/2,
-         terminate/2,
-         code_change/3]).
 
--export([start/2,start_link/2]).
--export([send/1]).
--export([stop/0]).
+-compile([export_all]).
 
 start(Ip,Port) ->
     gen_server:start({local, ?MODULE}, ?MODULE, {Ip,Port}, []).

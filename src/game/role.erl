@@ -75,6 +75,19 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
+handle_info({Module, Request,_Session}, Role) ->
+    try
+        case Module:handle({Request,Role}) of
+            {ok,NewRole} -> {noreply, NewRole};
+            _ -> {noreply, Role}
+        end
+    catch
+        Error:Reason ->
+            lager:error("Error ~p while handling:~p with Reason:~p stacktrace:~p",
+                        [Error, {Module,Request},Reason, erlang:get_stacktrace()]),
+            {noreply, Role}
+    end;
+
 handle_info(reconnected, Role) ->
     TimerRef = Role#role.reconnectionTimer,
     erlang:cancel_timer(TimerRef),

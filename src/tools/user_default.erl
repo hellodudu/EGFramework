@@ -7,6 +7,7 @@
 -include("role_pb.hrl").
 -include("role.hrl").
 -include("session.hrl").
+-include("chat_pb.hrl").
 
 -compile([export_all]).
 
