@@ -54,7 +54,7 @@ handle_info({tcp,Socket,Data},Session) ->
     try
         #session{socket=Socket, transport=Transport,connector_pid=ConnectorPid} = Session,
         BinaryData = erlang:iolist_to_binary(Data),
-        {Module, RequestRecord} = codec:decode(BinaryData),
+        {Module, RequestRecord} = lib_codec:decode(BinaryData),
         NewSession1 = 
             case route({Module,RequestRecord},Session) of
                 {ok, NewSession} when erlang:is_record(NewSession, session) ->
@@ -82,7 +82,7 @@ handle_info(timeout, Session) ->
     {stop, normal, Session};
 handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
     #session{socket=Socket, transport=Transport} = Session,
-    IOData = codec:encode(Record),
+    IOData = lib_codec:encode(Record),
     lager:debug("Server Response Record:~p",[Record]),
     Transport:send(Socket, IOData),
     {noreply, Session};

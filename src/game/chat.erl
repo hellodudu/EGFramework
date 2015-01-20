@@ -10,7 +10,7 @@
 
 handle({CsChatDeliverTo,Role}) when erlang:is_record(CsChatDeliverTo,cs_chat_deliver_to) ->
     #role{account_id=AccountId} = Role,
-    #cs_chat_deliver_to{receipent_account_id=ReceipentAccountId, message=Message} = CsChatDeliverTo,
+    #cs_chat_deliver_to{recipient_account_id=ReceipentAccountId, message=Message} = CsChatDeliverTo,
     ValidatedMessage = validate_message(Message),
     case global:whereis_name(ReceipentAccountId) of
         Pid when erlang:is_pid(Pid) -> 

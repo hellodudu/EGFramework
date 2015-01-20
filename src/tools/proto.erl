@@ -9,10 +9,10 @@ compile_all() ->
                            case filename:extension(File) of
                                ".proto" ->
                                    CompilingFile = "proto/"++File,
-                                   protobuffs_compile:scan_file(CompilingFile, 
-                                                                [{output_ebin_dir, "ebin"},
-                                                                 {output_include_dir, "include"},
-                                                                 {imports_dir, ["proto"]}]);
+                                   protobuffs_compile:generate_source(CompilingFile, 
+                                                                      [{output_src_dir, "src/proto"},
+                                                                       {output_include_dir, "include"},
+                                                                       {imports_dir, ["proto"]}]);
                                _ ->
                                    ignore
                            end
@@ -33,10 +33,10 @@ compile() ->
                                   case SourceLastModifiedDatetime > TargetLastModifiedDatetime of
                                       true ->
                                           CompilingFile = "proto/"++SourceFile,
-                                          protobuffs_compile:scan_file(CompilingFile, 
-                                                                       [{output_ebin_dir, "ebin"},
-                                                                        {output_include_dir, "include"},
-                                                                        {imports_dir,["proto"]}]);
+                                          protobuffs_compile:generate_source(CompilingFile, 
+                                                                             [{output_src_dir, "src/proto"},
+                                                                              {output_include_dir, "include"},
+                                                                              {imports_dir,["proto"]}]);
                                       _ ->
                                           ignore
                                   end;
@@ -47,4 +47,3 @@ compile() ->
                   FileList),
     io:format("Proto Compiled!~n"),
     erlang:halt(0).
-        

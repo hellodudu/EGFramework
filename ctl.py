@@ -6,6 +6,7 @@ import json
 import sys
 import string
 import random
+import commands
 
 
 erl = "erl "
@@ -27,8 +28,22 @@ def get_dependencies():
 
 dependencies = get_dependencies()
 
-def generate_pb_list():
+def get_proto_files_list():
     files = os.listdir("proto")
+    def f(x):
+        s = x.split('.')
+        if len(s) == 1:
+            return False
+        else:
+            filename, extension = s
+            if extension == "proto":
+                return True
+            else:
+                return False
+    return filter(f, files)
+
+def generate_pb_list():
+    files = get_proto_files_list()
     r = ""
     for file in files:
         file = file.split('.')
@@ -53,6 +68,30 @@ def build():
 
 
 def proto():
+    files = get_proto_files_list()
+    list.sort(files)
+    protoStartNum = 20000
+    nextProtoStep = 100;
+    output = ""
+    protoNum = protoStartNum
+    resultList = []
+    for file in files:
+        module,extension = file.split('.')
+        if extension == "proto":
+            command = '''./proto/proto_mapper --proto_path=./proto --erlang_mapper_output=./ --proto_id='''+str(protoNum) + " proto/"+file
+            output = commands.getoutput(command)
+            resultList.append(output)
+            protoNum += nextProtoStep
+    lastProto = resultList[-1]
+    lastSemicolonIndex = lastProto.rfind(';')
+    lastProtoWithoutSemicolon = lastProto[:lastSemicolonIndex]
+    lastProto = lastProtoWithoutSemicolon + '.'
+    resultList[-1] = lastProto
+    fileHeaders = '-module(proto_mapper).\n-export([get/1]).\n'
+    fileContents = '\n'.join(resultList)
+    fileContents = fileHeaders + fileContents
+    with open( "src/proto/proto_mapper.erl", "w") as f:
+        f.write(fileContents)
     command = erl + '-pa ' + dependencies + ' -eval \'proto:compile_all()\''
     os.system(command)
 

@@ -37,7 +37,7 @@ handle_cast(_Req,Socket) ->
     {noreply, Socket}.
 
 handle_info({to_server,Record},Socket) ->
-    IOData = codec:encode( Record ),
+    IOData = lib_codec:encode( Record ),
     IODataLength = erlang:byte_size(IOData),
     SocketData = << IODataLength:1/big-unsigned-integer-unit:16, IOData/binary >>,
     lager:debug("Sending Record ~p ",[Record]),
@@ -45,7 +45,7 @@ handle_info({to_server,Record},Socket) ->
     erlang:send(erlang:self(),recv),
     {noreply, Socket};
 handle_info({tcp,_Socket,Data}, Socket) ->
-    {Module, Response} = codec:decode(Data),
+    {Module, Response} = lib_codec:decode(Data),
     lager:debug("Received response: ~p", [Module,Response]),
     {noreply, Socket};
 handle_info({tcp_closed,_Socket}, _Socket) ->
@@ -63,7 +63,7 @@ handle_info(recv, Socket) ->
             << PacketLength:1/big-unsigned-integer-unit:16 >> = erlang:iolist_to_binary(Packet1),
             case gen_tcp:recv(Socket,PacketLength,timer:seconds(5)) of
                 {ok, Packet2} ->
-                    {_Module, Record} = codec:decode(erlang:iolist_to_binary(Packet2)),
+                    {_Module, Record} = lib_codec:decode(erlang:iolist_to_binary(Packet2)),
                     lager:debug("Client Received Record:~p",[Record]),
                     {noreply, Socket};
                 {error,Reason} ->
