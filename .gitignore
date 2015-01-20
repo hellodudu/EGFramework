@@ -9,3 +9,4 @@ ebin/
 .project
 .settings/
 log/
+src/proto
