@@ -130,25 +130,30 @@ def start_games():
 
 def start():
     start_connectors()
-    start_games() 
+    start_games()
+
+def help():
+    helpMessage = '''
+        Execute this script to generate protocol files,
+        build, and start the erlang game server.
+        Usage:
+        ./ctl build #build *.erl to *.beam files
+        ./ctl proto #generate *.proto to *.erl and *.hrl files
+        ./ctl start #start this game server
+        '''
+    print(helpMessage)
 
 if __name__ == '__main__':
-    try: 
+    commandFunMapper = { 'build':build, 'start':start, 'debug':debug,
+        'rebuild':rebuild, 'proto':proto,'help':help }
+    try:
         command = sys.argv[1]
-        if command == 'build':
-            build()
-        elif command == 'start':
-            start()
-        elif command == 'debug':
-            debug()
-        elif command == 'stop':
-            stop()
-        elif command == 'rebuild':
-            rebuild()
-        elif command == 'proto':
-            proto()
-        else:
-            print( "illegal command: " + command )
+        commandFunMapper[command]()
     except IndexError:
-        print( "illegal command. ")
+        commandFunMapper['help']()
         exit(1)
+    except KeyError:
+        commandFunMapper['help']()
+        exit(1)
+
+
