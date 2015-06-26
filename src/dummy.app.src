@@ -1,0 +1,9 @@
+{application, dummy, [
+    {description, "Dummy application, just for rebar compile!"},
+    {vsn, "0.0.1"},
+    {modules, [] },
+    {registered, []},
+    {applications, []},
+    {env, []}
+    ]
+}.
