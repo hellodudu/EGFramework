@@ -1,0 +1,12 @@
+{application, db_session, [
+    {description, "db session application."},
+    {vsn, "0.0.1"},
+    {modules, [db_session_app,db_session_sup,db_session,
+               account,account_pb,crypto,
+               role_pb]},
+    {registered, [db_session_sup]},
+    {mod, {db_session_app, [] } },
+    {applications, [emysql]}
+    {env, []}
+]
+}.

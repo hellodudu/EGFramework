@@ -107,8 +107,11 @@ route({Module,RequestRecord}, Session) ->
     #session{connector_pid=ConnectorPid, role_id=RoleId} = Session,
     RolePid = global:whereis_name(RoleId),
     if
+        %% 玩家在线则发送到role处理
         erlang:is_pid(RolePid) -> 
-            erlang:send(RolePid, {Module,RequestRecord, Session});
+            erlang:send(RolePid, {Module, RequestRecord, Session});
+
+        %% 玩家不在线则发送到account处理
         true ->
             if
                 erlang:is_pid(ConnectorPid) -> Module:handle({RequestRecord, Session});
