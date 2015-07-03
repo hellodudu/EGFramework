@@ -1,7 +1,6 @@
 -module(user_default).
 
 -include("account_pb.hrl").
--include("account.hrl").
 -include("connector.hrl").
 -include("error_code.hrl").
 -include("role_pb.hrl").

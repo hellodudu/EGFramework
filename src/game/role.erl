@@ -5,56 +5,7 @@
 -include("role.hrl").
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-
--export([start_role/1,stop_role/1]).
--export([restart_role/1,start_role/2]).
 -export([start_link/1]).
-
-start_role(RoleRecord) when erlang:is_record(RoleRecord, role) ->
-    #role{role_id=RoleId} = RoleRecord,
-    case global:whereis_name(RoleId) of
-        Pid when erlang:is_pid(Pid) -> 
-            erlang:send(Pid,reconnected),
-            ok;
-        undefined ->
-            GameNodeList = [ 'server1_game1@127.0.0.1' ], %%todo, get game node list from configuration.
-            GameNode = lists:nth( random:uniform(erlang:length(GameNodeList)), GameNodeList),
-            rpc:call(GameNode, role, start_role, [from_connector,RoleRecord])
-    end.
-
-start_role(from_connector,RoleRecord) when erlang:is_record(RoleRecord,role)->
-    RoleId = RoleRecord#role.role_id,
-    RoleChildSpec = {RoleId,
-                     {role, start_link, [RoleRecord]},
-                     transient,
-                     2000,
-                     worker,
-                     [role]
-                    },
-    StartChildResult = supervisor:start_child(role_sup, RoleChildSpec),
-    case StartChildResult of
-        {ok, ChildPid} when erlang:is_pid(ChildPid) -> 
-            ok;
-        {ok, ChildPid,_ChildInfo} when erlang:is_pid(ChildPid) -> 
-            ok;
-        {error,{already_started,ChildPid}} when erlang:is_pid(ChildPid) -> 
-            erlang:send(ChildPid, reconnected),
-            ok;
-        {error,already_present} -> 
-            supervisor:delete_child(role_sup, RoleId),
-            start_role(RoleRecord)
-    end.
-    %%supervisor is locally registered, player logic process is globally registered.
-
-stop_role(RoleRecord) when erlang:is_record(RoleRecord, role) ->
-    #role{role_id=RoleId} = RoleRecord,
-    stop_role(RoleId);
-stop_role(RoleId) ->
-    supervisor:terminate_child(role_sup, RoleId),
-    supervisor:delete_child(role_sup, RoleId).
-
-restart_role(RoleId) ->
-    supervisor:restart_child(role_sup, RoleId).
 
 start_link(RoleRecord) when erlang:is_record(RoleRecord, role)->
     RoleId = RoleRecord#role.role_id,
@@ -94,6 +45,10 @@ handle_info(reconnected, Role) ->
     {noreply, Role#role{reconnectionTimer=undefined}};
 
 handle_info(connector_down, Role) ->
+    prepare_to_stop_role(Role),
+    {stop, normal, Role};
+
+handle_info(connection_lost, Role) ->
     prepare_to_stop_role(Role),
     {stop, normal, Role};
 

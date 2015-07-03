@@ -8,7 +8,7 @@
 start(_Type, _StartArgs) ->
     {ok,[[PortString]]} = init:get_argument(port),
     Port = erlang:list_to_integer(PortString),
-    case ranch:start_listener(connector, 
+    pass = case ranch:start_listener(connector, 
                                    2000, 
                                    ranch_tcp, 
                                    [{port,Port},
@@ -23,13 +23,17 @@ start(_Type, _StartArgs) ->
         {error, {already_started, _}} -> pass;
         RanchError -> lager:error("Cannot start ranch with Error: ~p",RanchError)
     end,
-    case connector_sup:start_link() of
+
+    Ret = case connector_sup:start_link() of
         {ok, Pid} ->
             lager:info("Connector on node ~p, listening on port ~p", [erlang:node(),Port]),
             {ok, Pid};
         Error ->
             Error
-    end.
+    end,
+    
+    role_mgr:init(),
+    Ret.
 
 stop(State) ->
     lager:info( "Connector stopped at node ~p", [erlang:node()]),

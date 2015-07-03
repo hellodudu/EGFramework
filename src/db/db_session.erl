@@ -9,6 +9,7 @@
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([start/0, stop/0]).
+-export([get_max_rolenum/0]).
 
 init([]) -> {ok, #session{} }.
 
@@ -17,6 +18,14 @@ start() ->
 
 stop() ->
     gen_server:cast(?MODULE, stop).
+
+get_max_rolenum() ->
+    case get(role_num) of
+        undefined -> 
+            0;
+        Num ->
+            Num
+    end.
 
 handle_cast(stop, State) ->
     {stop, normal, State};
@@ -54,10 +63,18 @@ handle_info(timeout, State) ->
     %% 加载数据库到ets表中
     Role_Result = emysql:execute(?DBPOOL, <<"select * from role;">>),
     Role_Recs = emysql_util:as_record(Role_Result, role, record_info(fields, role)),
-    ets:new(ets_role, [set, protected, named_table, {keypos, #role.role_id}]),
+
+    %% 开启并发读写优化
+    ets:new(ets_role, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}, {keypos, #role.role_id}]),
     [ets:insert(ets_role, RoleRec) || RoleRec <- Role_Recs],
-    io:format("role load complete!~n"),
+
+    %% 玩家总数
+    Role_Nums = length(Role_Recs),
+    put(role_num, Role_Nums),
+    io:format("role<~p> load complete!~n", [Role_Nums]),
+
     {noreply, State};
+
 handle_info(_Info, State) ->
     {noreply, State}.
 
