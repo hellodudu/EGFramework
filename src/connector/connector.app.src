@@ -1,9 +1,7 @@
 {application, connector, [
-    {description, "game session application."},
+    {description, "connector application."},
     {vsn, "0.0.1"},
-    {modules, [connector_app,connector_sup,connector,
-               account,account_pb,
-               role_pb]},
+    {modules, [connector_app,connector_sup,connector, account_pb, role_pb]},
     {registered, [connector_sup]},
     {applications, [ranch] },
     {mod, {connector_app, [] } },
