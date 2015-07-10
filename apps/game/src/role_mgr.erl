@@ -1,10 +1,10 @@
 -module(role_mgr).
--include("role.hrl").
--include("session.hrl").
--include("error_code.hrl").
--include("db.hrl").
--include("role_pb.hrl").
--include("account_pb.hrl").
+-include("../../include/role.hrl").
+-include("../../include/session.hrl").
+-include("../../include/error_code.hrl").
+-include("../../include/db.hrl").
+-include("../../include/role_pb.hrl").
+-include("../../include/account_pb.hrl").
 
 -export([start_role/1, stop_role/1]).
 -export([restart_role/1, start_role/2]).
@@ -13,8 +13,7 @@
 
 %% 初始化
 init() ->
-    put(online_role_list, []).
-
+    ets:new(ets_online_role_list, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}]).
 
 %% 玩家进入游戏世界 开启role进程
 start_role(RoleRecord) when erlang:is_record(RoleRecord, role) ->
@@ -75,20 +74,21 @@ restart_role(RoleId) ->
 
 %% 未登录玩家处理
 handle({CsAccountLogin, Session}) when erlang:is_record(CsAccountLogin, cs_account_login) ->
-    #session{session_state=?CONNECTED} = Session,
-    #cs_account_login{account_id=AccountId} = CsAccountLogin, %% in production environment, we shall validate or 
+    lager:info("into role_mgr:handle_cs_account_login"),
+    #session{session_state = ?CONNECTED} = Session,
+    #cs_account_login{account_id = AccountId} = CsAccountLogin, %% in production environment, we shall validate or 
                                                               %% fetch account profile from 
                                                               %% another account server using a string token.
                                                               %% for simplicity, just assume that the account id is ok here.
-    global:register_name(AccountId, erlang:self()),            %% register account id as connector identifier
     NewSession = Session#session{account_id=AccountId,
                                  session_state=?LOGGED_IN},
     connector:send_to_role(Session, #sc_account_login{result=?SUCCESS}),
     {ok, NewSession};
 
-handle({CsAccountCreateRole,Session}) when erlang:is_record(CsAccountCreateRole, cs_account_create_role) ->
+handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole, cs_account_create_role) ->
     #session{account_id = AccountId, session_state=?LOGGED_IN} = Session,
-    OnlineRoleList = get(online_role_list),
+    OnlineRoleList = ets:tab2list(ets_online_role_list),
+    lager:info("into role_mgr:handle_cs_account_create_role, online role list = ~p", [OnlineRoleList]),
 
     ScAccountCreateRole =
         case (erlang:length(OnlineRoleList) < ?ROLE_MAX_NUM_CREATED) of

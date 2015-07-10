@@ -1,0 +1,15 @@
+{application, connector, [
+    {description, "connector application."},
+    {vsn, "0.0.1"},
+    {modules, [connector_app, connector_sup, connector]},
+    {registered, [connector_sup]},
+    {applications, [
+                    kernel,
+                    stdlib,
+                    ranch, 
+                    lager
+                    ]},
+    {mod, {connector_app, [] } },
+    {env, []}
+]
+}.

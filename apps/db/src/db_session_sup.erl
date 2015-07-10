@@ -1,7 +1,7 @@
 -module(db_session_sup).
 -behaviour(supervisor).
 
--include("session.hrl").
+-include("../../include/session.hrl").
 -export([start_link/0,init/1]).
 
 start_link() ->

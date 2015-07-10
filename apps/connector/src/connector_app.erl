@@ -1,7 +1,7 @@
 -module(connector_app).
 -behaviour(application).
 
--include("connector.hrl").
+-include("../../include/connector.hrl").
 
 -export([start/2, stop/1]).
 
@@ -11,16 +11,16 @@ start(_Type, _StartArgs) ->
     pass = case ranch:start_listener(connector, 
                                    2000, 
                                    ranch_tcp, 
-                                   [{port,Port},
+                                   [{port, Port},
                                     {active, once}, 
-                                    {packet,2},
-                                    {reuseaddr,true},
-                                    {keepalive,true},
-                                    {max_connections,256}], 
+                                    {packet, 0},
+                                    {reuseaddr, true},
+                                    {keepalive, true},
+                                    {max_connections, 256}], 
                                    connector, 
                                    []) of
         {ok,_ } -> pass;
-        {error, {already_started, _}} -> pass;
+        {error, {already_started, _}} -> error;
         RanchError -> lager:error("Cannot start ranch with Error: ~p",RanchError)
     end,
 

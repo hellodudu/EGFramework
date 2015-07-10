@@ -1,9 +1,9 @@
 -module(chat).
 
--include("chat_pb.hrl").
--include("role.hrl").
--include("session.hrl").
--include("error_code.hrl").
+-include("../../include/chat_pb.hrl").
+-include("../../include/role.hrl").
+-include("../../include/session.hrl").
+-include("../../include/error_code.hrl").
 
 -export([handle/1]).
 

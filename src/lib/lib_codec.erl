@@ -6,7 +6,9 @@ encode(Record) when erlang:is_tuple(Record) ->
     RecordNameAtom = erlang:element(1,Record),
     MessageName = erlang:atom_to_list(RecordNameAtom),
     [ _, ModuleName | _Command ] = string:tokens(MessageName, "_"),
+
     Encoder = erlang:list_to_existing_atom(ModuleName ++ "_pb"),
+    lager:info("encode Record=~p, MessageName=~p, ModuleName=~p~n", [Record, MessageName, ModuleName]),
     EncodeFunction = erlang:list_to_existing_atom("encode_"++MessageName),
     SerializedDataBinary = erlang:iolist_to_binary(Encoder:EncodeFunction(Record)),
     ProtocolNum = proto_mapper:get(RecordNameAtom),

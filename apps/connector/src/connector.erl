@@ -1,8 +1,8 @@
 -module(connector).
--include("connector.hrl").
--include("account_pb.hrl").
--include("role_pb.hrl").
--include("session.hrl").
+-include("../../include/connector.hrl").
+-include("../../include/account_pb.hrl").
+-include("../../include/role_pb.hrl").
+-include("../../include/session.hrl").
 
 -behaviour(gen_server).
 -behaviour(ranch_protocol).
@@ -21,7 +21,7 @@ send_to_role(AccountId, Response) when erlang:is_integer(AccountId) ->
         _ -> 
             {error, account_not_online}
     end;
-send_to_role(Session, Response) when erlang:is_record(Session,session) ->
+send_to_role(Session, Response) when erlang:is_record(Session, session) ->
     #session{connector_pid=ConnectorPid} = Session,
     send_to_role(ConnectorPid,Response);
 send_to_role(ConnectorPid, Response) when erlang:is_pid(ConnectorPid) ->
@@ -29,12 +29,13 @@ send_to_role(ConnectorPid, Response) when erlang:is_pid(ConnectorPid) ->
 send_to_role(ConnectorPid, {response, Response}) when erlang:is_pid(ConnectorPid)->
     erlang:send( ConnectorPid, {response, Response} ).
 
-init([]) -> {ok, #session{} }.
+init([]) -> 
+    {ok, #session{}}.
 
 init(Ref, Socket, Transport, _Opts) ->
     ok = proc_lib:init_ack({ok, self()}),
     ok = ranch:accept_ack(Ref),
-    ok = Transport:setopts(Socket, [{active, once},{packet,2},{keepalive,true}]),
+    ok = Transport:setopts(Socket, [binary, {active, once}, {packet, 0}, {keepalive, true}]),
     ConnectorPid = erlang:self(),
     erlang:put(connector_pid, ConnectorPid),
     Session = #session{socket=Socket,
@@ -50,19 +51,20 @@ handle_call(_Request, _From, Session) ->
 handle_cast(_Msg, Session) ->
     {noreply, Session}.
 
-handle_info({tcp,Socket,Data},Session) ->
+handle_info({tcp, Socket, Data},Session) ->
     try
         #session{socket=Socket, transport=Transport,connector_pid=ConnectorPid} = Session,
-        BinaryData = erlang:iolist_to_binary(Data),
-        {Module, RequestRecord} = lib_codec:decode(BinaryData),
+        RequestRecord = erlang:binary_to_term(Data),
+        lager:info("connector recv binary = ~p, record = ~p", [Data, RequestRecord]),
+        %{Module, RequestRecord} = lib_codec:decode(BinaryData),
         NewSession1 = 
-            case route({Module,RequestRecord},Session) of
+            case route(RequestRecord, Session) of
                 {ok, NewSession} when erlang:is_record(NewSession, session) ->
                     NewSession;
                 _ ->
                     Session
             end,
-        Transport:setopts(Socket, [{active,once},{packet,2},{keepalive,true}]),
+            Transport:setopts(Socket, [{active, once}, {packet, 0}, {keepalive, true}]),
         {noreply, NewSession1, ?SESSION_TIMEOUT}
     catch
         Error:Reason ->
@@ -80,11 +82,14 @@ handle_info({tcp_error,_Socket, Reason}, Session) ->
 handle_info(timeout, Session) ->
     after_session_lost(Session),
     {stop, normal, Session};
+
+%发送回复消息给客户端
 handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
     #session{socket=Socket, transport=Transport} = Session,
-    IOData = lib_codec:encode(Record),
-    lager:debug("Server Response Record:~p",[Record]),
-    Transport:send(Socket, IOData),
+    %IOData = lib_codec:encode(Record),
+    BinaryData = term_to_binary(Record),
+    lager:info("Server Response Binary:~p to Socket:~p",[BinaryData, Socket]),
+    Transport:send(Socket, BinaryData),
     {noreply, Session};
 handle_info(_Info, Session) ->
     {noreply, Session}.
@@ -101,21 +106,23 @@ terminate(_Reason, Session) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-route({Module,RequestRecord}, Session) ->
+route(RequestRecord, Session) ->
     %% first try to route to player process,
     %% if failed, handle it here in connector process.
-    #session{connector_pid=ConnectorPid, role_id=RoleId} = Session,
+    #session{connector_pid = ConnectorPid, role_id = RoleId} = Session,
     RolePid = global:whereis_name(RoleId),
+    lager:info("in route.. RequestRecord = ~p, RoleID = ~p, RolePid = ~p, Session = ~p", [RequestRecord, RoleId, RolePid, Session]),
     if
         %% 玩家在线则发送到role处理
         erlang:is_pid(RolePid) -> 
-            erlang:send(RolePid, {Module, RequestRecord, Session});
+            lager:info("role handle!"),
+            erlang:send(RolePid, {role, RequestRecord, Session});
 
-        %% 玩家不在线则发送到account处理
+        %% 玩家不在线则发送到role_mgr处理
         true ->
-            if
-                erlang:is_pid(ConnectorPid) -> Module:handle({RequestRecord, Session});
-                true -> erlang:error( no_process_to_handle_this_request )
+            if erlang:is_pid(ConnectorPid) ->
+                role_mgr:handle({RequestRecord, Session});
+            true -> erlang:error( no_process_to_handle_this_request )
             end
     end.
 
