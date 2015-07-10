@@ -61,7 +61,6 @@ handle_cast(_Req,Socket) ->
 
 handle_info({to_server, Record},Socket) ->
     BinaryData = erlang:term_to_binary(Record),
-    lager:info("client send binary = ~p", [BinaryData]),
     gen_tcp:send(Socket, BinaryData),
     erlang:send(erlang:self(), recv),
     {noreply, Socket};

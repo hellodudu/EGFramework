@@ -55,7 +55,6 @@ handle_info({tcp, Socket, Data},Session) ->
     try
         #session{socket=Socket, transport=Transport,connector_pid=ConnectorPid} = Session,
         RequestRecord = erlang:binary_to_term(Data),
-        lager:info("connector recv binary = ~p, record = ~p", [Data, RequestRecord]),
         %{Module, RequestRecord} = lib_codec:decode(BinaryData),
         NewSession1 = 
             case route(RequestRecord, Session) of
@@ -88,7 +87,6 @@ handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
     #session{socket=Socket, transport=Transport} = Session,
     %IOData = lib_codec:encode(Record),
     BinaryData = term_to_binary(Record),
-    lager:info("Server Response Binary:~p to Socket:~p",[BinaryData, Socket]),
     Transport:send(Socket, BinaryData),
     {noreply, Session};
 handle_info(_Info, Session) ->
@@ -111,7 +109,6 @@ route(RequestRecord, Session) ->
     %% if failed, handle it here in connector process.
     #session{connector_pid = ConnectorPid, role_id = RoleId} = Session,
     RolePid = global:whereis_name(RoleId),
-    lager:info("in route.. RequestRecord = ~p, RoleID = ~p, RolePid = ~p, Session = ~p", [RequestRecord, RoleId, RolePid, Session]),
     if
         %% 玩家在线则发送到role处理
         erlang:is_pid(RolePid) -> 

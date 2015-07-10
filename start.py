@@ -154,14 +154,14 @@ def start_connectors():
 def start_games():
     nodeName = SERVERID + 'game' + '@' + HOSTNAME
     command1 = erl + '-setcookie ' + COOKIE + " -s lager" +" -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
-    command2 = " -eval \'" + pb_list+ "application:start(game).\'"
+    command2 = " -eval \'" + pb_list+ "application:ensure_all_started(game).\'"
     command = command1 + command2
     os.system(command)
 
 def start_db():
     nodeName = SERVERID + 'db' + '@' + HOSTNAME
     command1 = erl + '-setcookie ' + COOKIE + " -s lager" +" -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
-    command2 = " -eval \'" + pb_list+ "application:start(game).\'"
+    command2 = " -eval \'" + pb_list+ "application:ensure_all_started(db_session).\'"
     command = command1 + command2
     os.system(command)
 

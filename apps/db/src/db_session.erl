@@ -14,7 +14,20 @@
 init([]) -> {ok, #session{} }.
 
 start() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], [{timeout, 0}]).
+    %% 加载数据库到ets表中
+    Role_Result = emysql:execute(?DBPOOL, <<"select * from role;">>),
+    Role_Recs = emysql_util:as_record(Role_Result, role, record_info(fields, role)),
+
+    %% 开启并发读写优化
+    ets:new(ets_role, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}, {keypos, #role.role_id}]),
+    [ets:insert(ets_role, RoleRec) || RoleRec <- Role_Recs],
+
+    %% 玩家总数
+    Role_Nums = length(Role_Recs),
+    put(role_num, Role_Nums),
+    lager:info("role<~p> load complete!~n", [Role_Nums]),
+
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
     gen_server:cast(?MODULE, stop).
@@ -37,7 +50,6 @@ handle_cast({save_role, RoleId}, State) ->
             io:format("role doesn't exist!~n"),
             ignore;
         List when length(List) == 1 ->
-            %% 更新ets数据 todo 获取最新角色数据
             PreRec = lists:last(List),
             NewRec = PreRec#role{diamond = 233},
             ets:delete(ets_role, NewRec#role.role_id),
@@ -58,21 +70,7 @@ handle_call(_Request, _From, Session) ->
     Reply = ok,
     {reply, Reply, Session}.
 
-%% 进程开启时加载
 handle_info(timeout, State) ->
-    %% 加载数据库到ets表中
-    Role_Result = emysql:execute(?DBPOOL, <<"select * from role;">>),
-    Role_Recs = emysql_util:as_record(Role_Result, role, record_info(fields, role)),
-
-    %% 开启并发读写优化
-    ets:new(ets_role, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}, {keypos, #role.role_id}]),
-    [ets:insert(ets_role, RoleRec) || RoleRec <- Role_Recs],
-
-    %% 玩家总数
-    Role_Nums = length(Role_Recs),
-    put(role_num, Role_Nums),
-    io:format("role<~p> load complete!~n", [Role_Nums]),
-
     {noreply, State};
 
 handle_info(_Info, State) ->
