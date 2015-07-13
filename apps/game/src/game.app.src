@@ -1,9 +1,13 @@
 {application, game, [
     {description, "Game logic application."},
     {vsn, "0.0.1"},
-    {modules, [game_app, game_sup, role_mgr, role_sup, role]},
+    {modules, [game_app, game_sup, connector, role_mgr, role_sup, role]},
     {registered, [game_sup]},
-    {applications, []},
+    {applications, [
+                    kernel,
+                    stdlib,
+                    ranch,
+                    lager]},
     {mod, {game_app, [] } },
     {env, []}
     ]

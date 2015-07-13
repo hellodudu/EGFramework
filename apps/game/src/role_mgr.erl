@@ -6,14 +6,48 @@
 -include("../../include/role_pb.hrl").
 -include("../../include/account_pb.hrl").
 
+-behaviour(gen_server).
+
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([start_role/1, stop_role/1]).
 -export([restart_role/1, start_role/2]).
--export([init/0]).
+-export([stop/0]).
 -export([handle/1]).
+-export([init/0]).
 
-%% 初始化
+
+init([]) -> {ok, self()}.
+
 init() ->
-    ets:new(ets_online_role_list, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}]).
+    ets:new(ets_online_role_list, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}]),
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+stop() ->
+    gen_server:cast(?MODULE, stop).
+
+handle_call(_Request, _From, State) ->
+    Reply = ok,
+    {reply, Reply, State}.
+
+handle_cast(stop, State) ->
+    {stop, normal, State};
+handle_cast(_Info, State) ->
+    {noreply, State}.
+
+%% 初始化数据库玩家列表
+handle_info({init_db_role, RoleList}, State) ->
+    ets:new(ets_role, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}, {keypos, #role.role_id}]),
+    [ets:insert(ets_role, Role) || Role <- RoleList],
+    {noreply, State};
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
 
 %% 玩家进入游戏世界 开启role进程
 start_role(RoleRecord) when erlang:is_record(RoleRecord, role) ->
@@ -40,11 +74,11 @@ start_role(RoleRecord) when erlang:is_record(RoleRecord, role) ->
 start_role(from_connector,RoleRecord) when erlang:is_record(RoleRecord,role)->
     RoleId = RoleRecord#role.role_id,
     RoleChildSpec = {RoleId,
-                     {role, start_link, [RoleRecord]},
+                     {role_sup, start_link, [RoleRecord]},
                      transient,
                      2000,
                      worker,
-                     [role]
+                     [role_sup]
                     },
     StartChildResult = supervisor:start_child(role_sup, RoleChildSpec),
     case StartChildResult of
@@ -74,7 +108,6 @@ restart_role(RoleId) ->
 
 %% 未登录玩家处理
 handle({CsAccountLogin, Session}) when erlang:is_record(CsAccountLogin, cs_account_login) ->
-    lager:info("into role_mgr:handle_cs_account_login"),
     #session{session_state = ?CONNECTED} = Session,
     #cs_account_login{account_id = AccountId} = CsAccountLogin, %% in production environment, we shall validate or 
                                                               %% fetch account profile from 
@@ -88,7 +121,6 @@ handle({CsAccountLogin, Session}) when erlang:is_record(CsAccountLogin, cs_accou
 handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole, cs_account_create_role) ->
     #session{account_id = AccountId, session_state=?LOGGED_IN} = Session,
     OnlineRoleList = ets:tab2list(ets_online_role_list),
-    lager:info("into role_mgr:handle_cs_account_create_role, online role list = ~p", [OnlineRoleList]),
 
     ScAccountCreateRole =
         case (erlang:length(OnlineRoleList) < ?ROLE_MAX_NUM_CREATED) of
@@ -106,18 +138,14 @@ handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole
                 %% id简单自增1
                 RoleId = db_session:get_max_rolenum() + 1,
                 StoreRoleRec = RoleRecord#role{role_id = RoleId},
+
                 case ets:lookup(ets_role, RoleId) of
                     [] ->
                         %% 更新ets数据
                         ets:insert(ets_role, StoreRoleRec),
-
-                        %% 执行sql语句
-                        Query = io_lib:format("update role set account_id=~B, name=\"~s\", sex=~B, level=~B, diamond=~B where role_id=~B", 
-                            [StoreRoleRec#role.account_id, StoreRoleRec#role.name, StoreRoleRec#role.sex, StoreRoleRec#role.level, StoreRoleRec#role.diamond, StoreRoleRec#role.role_id]),
-                        emysql:execute(?DBPOOL, Query),
-                        io:format("role insert ok!~n");
-                    _ ->
-                        io:format("role exist!~n"),
+                        {db_session, 'server1db@127.0.0.1'} ! {create_role, StoreRoleRec};
+                    Result ->
+                        lager:info("ets_role lookup result = ~p", [Result]),
                         ignore
                 end,
 
@@ -126,6 +154,7 @@ handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole
                 put(online_role_list, NewOnlineRoleList),
                 #sc_account_create_role{result=?SUCCESS, role_id_list=NewOnlineRoleList};
             false ->
+                lager:info("length limit online role list size = ~p", [erlang:length(OnlineRoleList)]),
                 #sc_account_create_role{result=?ROLE_MAX_NUM_CREATED}
         end,
     connector:send_to_role(Session, ScAccountCreateRole),

@@ -144,17 +144,10 @@ def reset_db():
     os.system( command )
     print('reset success!')
 
-def start_connectors():
-    nodeName = SERVERID + 'con' + '@' + HOSTNAME
-    command1 = erl + '-setcookie ' + COOKIE + " -s lager" + " -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
-    command2 = " -port " + PORT + " -eval \'" + pb_list+ " application:ensure_all_started(connector).\' "
-    command = command1+command2
-    os.system(command)
-
-def start_games():
+def start_game():
     nodeName = SERVERID + 'game' + '@' + HOSTNAME
     command1 = erl + '-setcookie ' + COOKIE + " -s lager" +" -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
-    command2 = " -eval \'" + pb_list+ "application:ensure_all_started(game).\'"
+    command2 = " -port " + PORT + " -eval \'" + pb_list+ "application:ensure_all_started(game).\'"
     command = command1 + command2
     os.system(command)
 
@@ -177,9 +170,8 @@ def start_client():
 
 
 def start():
-    start_connectors()
     start_db()
-    start_games()
+    start_game()
 
 def help():
     helpMessage = '''
@@ -194,7 +186,7 @@ def help():
     print(helpMessage)
 
 if __name__ == '__main__':
-    commandFunMapper = { 'build':build, 'start':start, 'start_client':start_client, 'start_connectors':start_connectors, 'start_games':start_games, 'start_db':start_db, 'reset_db':reset_db,
+    commandFunMapper = { 'build':build, 'start':start, 'start_client':start_client, 'start_game':start_game, 'start_db':start_db, 'reset_db':reset_db,
         'rebuild':rebuild, 'proto':proto,'help':help }
     try:
         command = sys.argv[1]

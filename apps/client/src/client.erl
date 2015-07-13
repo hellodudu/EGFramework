@@ -16,8 +16,9 @@
 
 % 发送操作消息到服务器
 -export([
-        send_login/0,
-        send_create_role/1
+        login/0,
+        create_role/1,
+        get_role_list/0
     ]).
 
 start(Ip, Port) ->
@@ -29,13 +30,17 @@ start_link(Ip, Port) ->
 send(MessageRecord) ->
     erlang:send( ?MODULE, {to_server,MessageRecord}).
 
-send_login() ->
+login() ->
     Login = #cs_account_login{account_id=1},
     send(Login).
 
-send_create_role(Name) ->
+create_role(Name) ->
     CreateRole = #cs_account_create_role{account_id=1, name=Name, sex=1},
     send(CreateRole).
+
+get_role_list() ->
+    RoleList = #cs_account_get_role_id_list{},
+    send(RoleList).
 
 stop() ->
     erlang:send(?MODULE, stop).

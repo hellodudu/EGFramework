@@ -27,6 +27,9 @@ start() ->
     put(role_num, Role_Nums),
     lager:info("role<~p> load complete!~n", [Role_Nums]),
 
+    %% 创建节点连接进程
+    spawn(fun() -> update_connection() end),
+
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
@@ -62,7 +65,6 @@ handle_cast({save_role, RoleId}, State) ->
             io:format("role save ok!~n")
     end,
     {reply, {db_session_saveok}, State};
-
 handle_cast(_Request, State) ->
     {noreply, State}.
 
@@ -73,6 +75,14 @@ handle_call(_Request, _From, Session) ->
 handle_info(timeout, State) ->
     {noreply, State};
 
+%% 创建新角色
+handle_info({create_role, StoreRoleRec}, State) ->
+    %% 执行sql语句
+    Query = io_lib:format("insert into role set account_id=~B, name=\"~s\", sex=~B, level=~B, diamond=~B ", 
+        [StoreRoleRec#role.account_id, StoreRoleRec#role.name, StoreRoleRec#role.sex, StoreRoleRec#role.level, StoreRoleRec#role.diamond]),
+    lager:info("query<~s> execute successful", [Query]),
+    emysql:execute(?DBPOOL, Query),
+    {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -88,25 +98,33 @@ terminate(_Reason, Session) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-%route({Module,RequestRecord}, Session) ->
-    %%% first try to route to player process,
-    %%% if failed, handle it here in connector process.
-    %#session{connector_pid=ConnectorPid, role_id=RoleId} = Session,
-    %RolePid = global:whereis_name(RoleId),
-    %if
-        %erlang:is_pid(RolePid) -> 
-            %erlang:send(RolePid, {Module,RequestRecord, Session});
-        %true ->
-            %if
-                %erlang:is_pid(ConnectorPid) -> Module:handle({RequestRecord, Session});
-                %true -> erlang:error( no_process_to_handle_this_request )
-            %end
-    %end.
+%% 探测节点
+update_connection() ->
+    receive
+    after 3000 ->
+        Nodes = nodes(),
+        case lists:member('server1game@127.0.0.1', Nodes) of
+            false ->
+                lager:info("try connecting connector"),
+                case net_adm:ping('server1game@127.0.0.1') of
+                    pong ->
+                        [lager:info("connect node<~p> success", [Node]) || Node <- nodes()],
+                        [send_info(Node) || Node <- nodes()];
+                    _ ->
+                        ignore
+                end;
+            true ->
+                ignore
+        end
+    end,
+    update_connection().
 
-%after_session_lost(Session) ->
-    %RoleId = Session#session.role_id,
-    %RolePid = global:whereis_name(RoleId),
-    %if
-        %erlang:is_pid( RolePid ) -> erlang:send( RolePid, connection_lost );
-        %true -> ignore
-    %end.
+%% 发送初始化数据
+send_info(Node) ->
+    case Node of
+        Connector when Connector == 'server1game@127.0.0.1' ->
+            {game_connector, 'server1game@127.0.0.1'} ! {init_role, ets:tab2list(ets_role)};
+        _Other ->
+            pass
+    end.
+
