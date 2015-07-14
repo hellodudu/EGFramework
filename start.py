@@ -9,8 +9,8 @@ HOSTNAME = "127.0.0.1"
 PORT     = "2345"
 USERNAME = "root"
 PASSWORD = "123qwe"
-SERVERID = "server1"
-COOKIE   = "server1"
+SERVERID = "server"
+COOKIE   = "server"
 
 erl = "erl "
 
@@ -144,34 +144,48 @@ def reset_db():
     os.system( command )
     print('reset success!')
 
-def start_game():
+def start_game(detach=False):
     nodeName = SERVERID + 'game' + '@' + HOSTNAME
-    command1 = erl + '-setcookie ' + COOKIE + " -s lager" +" -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
-    command2 = " -port " + PORT + " -eval \'" + pb_list+ "application:ensure_all_started(game).\'"
-    command = command1 + command2
+    command1 = erl + '-setcookie ' + COOKIE
+    if detach == True:
+        command1 += " -detached"
+    command2 = " -s lager" +" -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
+    command3 = " -port " + PORT + " -eval \'" + pb_list+ "application:ensure_all_started(game).\'"
+    command = command1 + command2 + command3
     os.system(command)
 
-def start_db():
+def start_db(detach=False):
     nodeName = SERVERID + 'db' + '@' + HOSTNAME
-    command1 = erl + '-setcookie ' + COOKIE + " -s lager" +" -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
-    command2 = " -eval \'" + pb_list+ "application:ensure_all_started(db_session).\'"
-    command = command1 + command2
+    command1 = erl + '-setcookie ' + COOKIE
+    if detach == True:
+        command1 += " -detached"
+    command2 = " -s lager" + " -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
+    command3 = " -port" + PORT + " -eval \'" + pb_list+ "application:ensure_all_started(db_session).\'"
+    command = command1 + command2 + command3
     os.system(command)
 
 def start_client():
     '''
     start client
     '''
-    nodeName = 'client' + '@' + HOSTNAME
-    command1 = erl + '-setcookie ' + COOKIE + " -s lager" + " -pa " + dep_ebin_dirs + " " + apps_ebin_dirs + " -name " + nodeName
+    #nodeName = 'client' + '@' + HOSTNAME
+    command1 = erl + '-setcookie ' + COOKIE + " -s lager" + " -pa " + dep_ebin_dirs + " " + apps_ebin_dirs
     command2 = " -port " + PORT + " -host " + HOSTNAME + " -eval \'" + pb_list+ " application:ensure_all_started(client).\' "
     command = command1+command2
     os.system(command)
 
 
 def start():
-    start_db()
-    start_game()
+    start_db(True)
+    start_game(True)
+
+def stop():
+    command = "ps aux|grep ensure_all_started|awk '{print $2}'|xargs kill -9"
+    os.system(command)
+
+def generate():
+    subprocess.call('rebar compile generate', shell=True)
+
 
 def help():
     helpMessage = '''
@@ -182,12 +196,12 @@ def help():
         ./start rebuild #get all deps and generate *_pb.hrl files, then build all project files
         ./start reset_db #reset mysql and import init sql files with src/tools/db_game.sql
         ./start start #start this game server
+        ./stop  kill all node process
         '''
     print(helpMessage)
 
 if __name__ == '__main__':
-    commandFunMapper = { 'build':build, 'start':start, 'start_client':start_client, 'start_game':start_game, 'start_db':start_db, 'reset_db':reset_db,
-        'rebuild':rebuild, 'proto':proto,'help':help }
+    commandFunMapper = { 'build':build, 'start':start, 'stop':stop, 'generate':generate, 'start_client':start_client, 'start_game':start_game, 'start_db':start_db, 'reset_db':reset_db, 'rebuild':rebuild, 'proto':proto,'help':help }
     try:
         command = sys.argv[1]
         commandFunMapper[command]()

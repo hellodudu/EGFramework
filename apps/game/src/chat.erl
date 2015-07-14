@@ -5,21 +5,30 @@
 -include("../../include/session.hrl").
 -include("../../include/error_code.hrl").
 
--export([handle/1]).
+-export([handle/2]).
 
 
-handle({CsChatDeliverTo,Role}) when erlang:is_record(CsChatDeliverTo,cs_chat_deliver_to) ->
-    #role{account_id=AccountId} = Role,
+handle({CsChatDeliverTo, _RoleRecord}, SenderSession) when erlang:is_record(CsChatDeliverTo, cs_chat_deliver_to) ->
     #cs_chat_deliver_to{recipient_account_id=ReceipentAccountId, message=Message} = CsChatDeliverTo,
     ValidatedMessage = validate_message(Message),
-    case global:whereis_name(ReceipentAccountId) of
-        Pid when erlang:is_pid(Pid) -> 
-            connector:send_to_role(Pid,#sc_chat_one_message{sender_account_id=ReceipentAccountId,
-                                                            message=ValidatedMessage}),
-            connector:send_to_role(AccountId, #sc_chat_deliver_to{result=?SUCCESS});
-        _ -> 
-            connector:send_to_role(AccountId, #sc_chat_deliver_to{result=?ROLE_NOT_ONLINE})
-    end.
+
+    %% 筛选出在线角色
+    RecList = role_mgr:get_role_record_by_account(ReceipentAccountId),
+    ToSessionList = [Rec#role.session || Rec <- RecList],
+    [connector:send_to_role(Session, #sc_chat_one_message{sender_account_id=ReceipentAccountId, message=ValidatedMessage}) || Session <- ToSessionList],
+
+    %% 返回结果给发送者
+    connector:send_to_role(SenderSession, #sc_chat_deliver_to{result=?SUCCESS});
+handle(_, _) ->
+    lager:info("chat handle other").
   
-validate_message(Message) -> %% fuck you --transate-to--> ** you
+validate_message(Message) -> 
     Message.
+
+session_filter(Element) ->
+    case Element#role.session of
+        undefined ->
+            false;
+        _ ->
+            true
+    end.

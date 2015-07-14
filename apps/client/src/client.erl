@@ -7,6 +7,7 @@
 -include("../../include/role_pb.hrl").
 -include("../../include/role.hrl").
 -include("../../include/session.hrl").
+-include("../../include/chat_pb.hrl").
 
 -behavoir(gen_server).
 
@@ -16,9 +17,12 @@
 
 % 发送操作消息到服务器
 -export([
-        login/0,
+        login/1,
         create_role/1,
-        get_role_list/0
+        get_role_list/0,
+        get_role/1,
+        enter_game/1,
+        chat/2
     ]).
 
 start(Ip, Port) ->
@@ -30,22 +34,66 @@ start_link(Ip, Port) ->
 send(MessageRecord) ->
     erlang:send( ?MODULE, {to_server,MessageRecord}).
 
-login() ->
-    Login = #cs_account_login{account_id=1},
-    send(Login).
+%% 操作
+login(AccountID) ->
+    case get(account_id) of
+        undefined ->
+            Login = #cs_account_login{account_id=AccountID},
+            put(account_id, AccountID),
+            send(Login);
+        _ ->
+            lager:info("you have logged in already")
+    end.
 
 create_role(Name) ->
-    CreateRole = #cs_account_create_role{account_id=1, name=Name, sex=1},
-    send(CreateRole).
+    case get(account_id) of
+        undefined ->
+            lager:info("please login first");
+        AccountID ->
+            CreateRole = #cs_account_create_role{account_id=AccountID, name=Name, sex=1},
+            send(CreateRole)
+    end.
 
 get_role_list() ->
-    RoleList = #cs_account_get_role_id_list{},
-    send(RoleList).
+    case get(account_id) of
+        undefined ->
+            lager:info("please login first");
+        _ ->
+            RoleList = #cs_account_get_role_id_list{},
+            send(RoleList)
+    end.
+
+get_role(RoleID) ->
+    case get(account_id) of
+        undefined ->
+            lager:info("please login first");
+        _ ->
+            GetRole = #cs_account_get_role{role_id = RoleID},
+            send(GetRole)
+    end.
+
+enter_game(RoleID) ->
+    case get(account_id) of
+        undefined ->
+            lager:info("please login first");
+        _ ->
+            EnterGame = #cs_account_enter_game{role_id = RoleID},
+            send(EnterGame)
+    end.
+
+chat(ToAccountID, Message) ->
+    case get(account_id) of
+        undefined ->
+            lager:info("please login first");
+        _ ->
+            Chat = #cs_chat_deliver_to{recipient_account_id = ToAccountID, message = Message},
+            send(Chat)
+    end.
 
 stop() ->
     erlang:send(?MODULE, stop).
 
-init({Ip,Port}) ->
+init({Ip, Port}) ->
     SocketOptions = [binary, {packet, 0}, {active, false}, {keepalive, true}],
     case gen_tcp:connect(Ip, Port, SocketOptions) of
         {ok, Socket} ->
@@ -64,10 +112,26 @@ handle_call(_,_From,Socket)->
 handle_cast(_Req,Socket) ->
     {noreply, Socket}.
 
-handle_info({to_server, Record},Socket) ->
+handle_info({to_server, Record}, Socket) ->
     BinaryData = erlang:term_to_binary(Record),
     gen_tcp:send(Socket, BinaryData),
     erlang:send(erlang:self(), recv),
+    {noreply, Socket};
+handle_info({respond, {_, Code}}, Socket) ->
+    case Code of
+        0 ->
+            lager:info("execute successful!");
+        N ->
+            lager:info("execute error, code = ~p", [N])
+    end,
+    {noreply, Socket};
+handle_info({respond, {_, Code, _}}, Socket) ->
+    case Code of
+        0 ->
+            lager:info("execute successful!");
+        N ->
+            lager:info("execute error, code = ~p", [N])
+    end,
     {noreply, Socket};
 handle_info({tcp,_Socket,Data}, Socket) ->
     %{Module, Response} = lib_codec:decode(Data),
@@ -90,7 +154,8 @@ handle_info(recv, Socket) ->
         {ok, Packet1} -> 
             <<Rest/binary>> = Packet1,
             Record = binary_to_term(Rest),
-            lager:info("recv RespondRec = ~p", [Record]),
+            lager:info("recv Respond = ~p", [Record]),
+            self() ! {respond, Record},
             {noreply, Socket};
         {error, Reason} ->
             lager:error( "Client receiving error with reason:~p", [Reason]),

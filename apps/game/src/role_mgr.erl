@@ -14,6 +14,7 @@
 -export([stop/0]).
 -export([handle/1]).
 -export([init/0]).
+-export([get_role_record_by_account/1]).
 
 
 init([]) -> {ok, self()}.
@@ -54,31 +55,20 @@ start_role(RoleRecord) when erlang:is_record(RoleRecord, role) ->
     #role{role_id=RoleId} = RoleRecord,
     case global:whereis_name(RoleId) of
         Pid when erlang:is_pid(Pid) -> 
-            DataTree = get(role_data),
-            case gb_trees:lookup(RoleId, DataTree) of
-                {value, _RoleValue} ->
-                    gb_trees:update(RoleId, 1, DataTree),
-                    put(role_data, DataTree);
-                none ->
-                    gb_trees:insert(RoleId, 1, DataTree)
-            end,
-            erlang:send(Pid,reconnected),
+            erlang:send(Pid, reconnected),
             ok;
         undefined ->
-            GameNodeList = [ 'server1_game1@127.0.0.1' ], %%todo, get game node list from configuration.
-            GameNode = lists:nth( random:uniform(erlang:length(GameNodeList)), GameNodeList),
-            rpc:call(GameNode, role_mgr, start_role, [from_connector,RoleRecord])
+            start_role(new, RoleRecord)
     end.
 
-%% 重连
-start_role(from_connector,RoleRecord) when erlang:is_record(RoleRecord,role)->
+start_role(new, RoleRecord) when erlang:is_record(RoleRecord, role)->
     RoleId = RoleRecord#role.role_id,
     RoleChildSpec = {RoleId,
-                     {role_sup, start_link, [RoleRecord]},
+                     {role, start_link, [RoleRecord]},
                      transient,
                      2000,
                      worker,
-                     [role_sup]
+                     [role]
                     },
     StartChildResult = supervisor:start_child(role_sup, RoleChildSpec),
     case StartChildResult of
@@ -86,14 +76,13 @@ start_role(from_connector,RoleRecord) when erlang:is_record(RoleRecord,role)->
             ok;
         {ok, ChildPid,_ChildInfo} when erlang:is_pid(ChildPid) -> 
             ok;
-        {error,{already_started,ChildPid}} when erlang:is_pid(ChildPid) -> 
+        {error, {already_started, ChildPid}} when erlang:is_pid(ChildPid) -> 
             erlang:send(ChildPid, reconnected),
             ok;
-        {error,already_present} -> 
+        {error, already_present} -> 
             supervisor:delete_child(role_sup, RoleId),
             start_role(RoleRecord)
     end.
-    %%supervisor is locally registered, player logic process is globally registered.
 
 %% 结束玩家进程
 stop_role(RoleRecord) when erlang:is_record(RoleRecord, role) ->
@@ -143,7 +132,7 @@ handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole
                     [] ->
                         %% 更新ets数据
                         ets:insert(ets_role, StoreRoleRec),
-                        {db_session, 'server1db@127.0.0.1'} ! {create_role, StoreRoleRec};
+                        {db_session, 'serverdb@127.0.0.1'} ! {create_role, StoreRoleRec};
                     Result ->
                         lager:info("ets_role lookup result = ~p", [Result]),
                         ignore
@@ -161,44 +150,43 @@ handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole
     {ok, Session};
 
 handle({CsAccountGetRoleIdList, Session}) when erlang:is_record(CsAccountGetRoleIdList,cs_account_get_role_id_list) ->
-    #session{session_state=?LOGGED_IN} = Session,
-    ScAccountGetRoleIdList = #sc_account_get_role_id_list{result = ?SUCCESS, role_id_list = get(online_role_list)},
+    #session{session_state=?LOGGED_IN, account_id=AccountID} = Session,
+    RoleList = ets:match_object(ets_role, #role{account_id = AccountID, _='_'}),
+    ScAccountGetRoleIdList = #sc_account_get_role_id_list{result = ?SUCCESS, role_id_list = RoleList},
     connector:send_to_role(Session, ScAccountGetRoleIdList),
     ok;
 
-handle({CsAccountGetRole,Session}) when erlang:is_record(CsAccountGetRole,cs_account_get_role) ->
+handle({CsAccountGetRole, Session}) when erlang:is_record(CsAccountGetRole, cs_account_get_role) ->
     #cs_account_get_role{role_id=RoleId} = CsAccountGetRole,
-    RoleIdBinary = erlang:iolist_to_binary(RoleId),
-    #session{account_id=_AccountId, session_state=?LOGGED_IN} = Session,
-    RoleIdList = get(online_role_list),
+    #session{account_id=AccountID, session_state=?LOGGED_IN} = Session,
+    RoleIdList = ets:match_object(ets_role, #role{role_id = RoleId, account_id = AccountID, _='_'}),
     ScAccountGetRole = 
-        case lists:member(RoleIdBinary, RoleIdList) of
-            false ->
+        case length(RoleIdList) of
+            0 ->
                 #sc_account_get_role{result=?ROLE_NOT_YOURS};
-            true ->
-                case get_role_record(RoleIdBinary) of
-                    RoleRecord when erlang:is_record(RoleRecord,role) ->
+            _Length ->
+                case get_role_record(RoleId) of
+                    RoleRecord when erlang:is_record(RoleRecord, role) ->
                         #role{name=Name,sex=Sex,level=Level} = RoleRecord,
-                        RoleInfo = #role_info{role_id=RoleIdBinary,name=Name,sex=Sex,level=Level},
-                        #sc_account_get_role{result=?SUCCESS,role=RoleInfo};
+                        RoleInfo = #role_info{role_id=RoleId, name=Name, sex=Sex, level=Level},
+                        #sc_account_get_role{result=?SUCCESS, role=RoleInfo};
                     _ ->
                         #sc_account_get_role{result=?ROLE_NOT_EXISTED}
                 end
         end,
-    connector:send_to_role(Session,ScAccountGetRole),
+    connector:send_to_role(Session, ScAccountGetRole),
     ok;
 
 handle({CsAccountEnterGame, Session}) when erlang:is_record(CsAccountEnterGame,cs_account_enter_game) ->
     #cs_account_enter_game{role_id=RoleId} = CsAccountEnterGame,
-    #session{session_state=?LOGGED_IN} = Session,
-    RoleIdBinary = erlang:iolist_to_binary(RoleId),
-    RoleIdList = get(online_role_list),
+    #session{account_id=AccountID, session_state=?LOGGED_IN} = Session,
+    RoleIdList = ets:match_object(ets_role, #role{role_id = RoleId, account_id = AccountID, _='_'}),
     ScAccountEnterGame = 
-        case lists:member(RoleIdBinary,RoleIdList) of
-            false ->
+        case length(RoleIdList) of
+            0 ->
                 #sc_account_enter_game{result = ?ROLE_NOT_YOURS};
-            true ->
-                case get_role_record(RoleIdBinary) of
+            _Length ->
+                case get_role_record(RoleId) of
                     RoleRecord when erlang:is_record(RoleRecord,role)->
                         SessionRoleRecord = RoleRecord#role{session=Session},
                         case role_mgr:start_role(SessionRoleRecord) of
@@ -212,18 +200,22 @@ handle({CsAccountEnterGame, Session}) when erlang:is_record(CsAccountEnterGame,c
     Result = ScAccountEnterGame#sc_account_enter_game.result,
     NewSession = 
         case Result of
-            ?SUCCESS -> Session#session{role_id=RoleIdBinary};
+            ?SUCCESS -> Session#session{role_id=RoleId};
             _ -> Session
         end,
+
+    ets:update_element(ets_role, RoleId, {#role.session, NewSession}),
     connector:send_to_role(Session, ScAccountEnterGame),
     {ok, NewSession}.
 
 get_role_record(RoleId) ->
     case ets:lookup(ets_role, RoleId) of
         [] ->
-            io:format("role doesn't exist!~n"),
+            lager:info("role doesn't exist!"),
             not_existed;
         List when length(List) == 1 ->
             lists:last(List)
     end.
 
+get_role_record_by_account(AccountID) ->
+    ets:match_object(ets_role, #role{role_id = '_', account_id = AccountID, _='_'}).

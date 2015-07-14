@@ -24,6 +24,8 @@ send_to_role(AccountId, Response) when erlang:is_integer(AccountId) ->
 send_to_role(Session, Response) when erlang:is_record(Session, session) ->
     #session{connector_pid=ConnectorPid} = Session,
     send_to_role(ConnectorPid,Response);
+send_to_role(undefined, _) ->
+    pass;
 send_to_role(ConnectorPid, Response) when erlang:is_pid(ConnectorPid) ->
     erlang:send( ConnectorPid, {response, Response} );
 send_to_role(ConnectorPid, {response, Response}) when erlang:is_pid(ConnectorPid)->
@@ -51,11 +53,10 @@ handle_call(_Request, _From, Session) ->
 handle_cast(_Msg, Session) ->
     {noreply, Session}.
 
-handle_info({tcp, Socket, Data},Session) ->
+handle_info({tcp, Socket, Data}, Session) ->
     try
         #session{socket=Socket, transport=Transport,connector_pid=ConnectorPid} = Session,
         RequestRecord = erlang:binary_to_term(Data),
-        %{Module, RequestRecord} = lib_codec:decode(BinaryData),
         NewSession1 = 
             case route(RequestRecord, Session) of
                 {ok, NewSession} when erlang:is_record(NewSession, session) ->
@@ -85,7 +86,6 @@ handle_info(timeout, Session) ->
 %发送回复消息给客户端
 handle_info({response, Record}, Session) when erlang:is_tuple(Record) ->
     #session{socket=Socket, transport=Transport} = Session,
-    %IOData = lib_codec:encode(Record),
     BinaryData = term_to_binary(Record),
     Transport:send(Socket, BinaryData),
     {noreply, Session};
@@ -112,8 +112,7 @@ route(RequestRecord, Session) ->
     if
         %% 玩家在线则发送到role处理
         erlang:is_pid(RolePid) -> 
-            lager:info("role handle!"),
-            erlang:send(RolePid, {role, RequestRecord, Session});
+            erlang:send(RolePid, {RequestRecord, Session});
 
         %% 玩家不在线则发送到role_mgr处理
         true ->

@@ -28,6 +28,7 @@ start() ->
     lager:info("role<~p> load complete!~n", [Role_Nums]),
 
     %% 创建节点连接进程
+    lager:info("try connecting connector"),
     spawn(fun() -> update_connection() end),
 
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -46,25 +47,7 @@ get_max_rolenum() ->
 handle_cast(stop, State) ->
     {stop, normal, State};
 
-%% 保存角色
-handle_cast({save_role, RoleId}, State) ->
-    case ets:lookup(ets_role, RoleId) of
-        [] ->
-            io:format("role doesn't exist!~n"),
-            ignore;
-        List when length(List) == 1 ->
-            PreRec = lists:last(List),
-            NewRec = PreRec#role{diamond = 233},
-            ets:delete(ets_role, NewRec#role.role_id),
-            ets:insert(ets_role, NewRec),
 
-            %% 执行sql语句
-            Query = io_lib:format("update role set account_id=~B, name=\"~s\", sex=~B, level=~B, diamond=~B where role_id=~B", 
-                [NewRec#role.account_id, NewRec#role.name, NewRec#role.sex, NewRec#role.level, NewRec#role.diamond, NewRec#role.role_id]),
-            emysql:execute(?DBPOOL, Query),
-            io:format("role save ok!~n")
-    end,
-    {reply, {db_session_saveok}, State};
 handle_cast(_Request, State) ->
     {noreply, State}.
 
@@ -78,10 +61,29 @@ handle_info(timeout, State) ->
 %% 创建新角色
 handle_info({create_role, StoreRoleRec}, State) ->
     %% 执行sql语句
-    Query = io_lib:format("insert into role set account_id=~B, name=\"~s\", sex=~B, level=~B, diamond=~B ", 
-        [StoreRoleRec#role.account_id, StoreRoleRec#role.name, StoreRoleRec#role.sex, StoreRoleRec#role.level, StoreRoleRec#role.diamond]),
+    Query = io_lib:format("insert into role set role_id=~B, account_id=~B, name=\"~s\", sex=~B, level=~B, diamond=~B ", 
+        [StoreRoleRec#role.role_id, StoreRoleRec#role.account_id, StoreRoleRec#role.name, StoreRoleRec#role.sex, StoreRoleRec#role.level, StoreRoleRec#role.diamond]),
     lager:info("query<~s> execute successful", [Query]),
     emysql:execute(?DBPOOL, Query),
+    {noreply, State};
+
+%% 保存角色 todo
+handle_info({save_role, RoleId}, State) ->
+    case ets:lookup(ets_role, RoleId) of
+        [] ->
+            lager:info("role<~p> doesn't exist!", [RoleId]),
+            ignore;
+        List when length(List) == 1 ->
+            PreRec = lists:last(List),
+            NewRec = PreRec#role{diamond = 233},
+            ets:update_element(ets_role, 1, {#role.diamond, NewRec#role.diamond}),
+
+            %% 执行sql语句
+            Query = io_lib:format("update role set account_id=~B, name=\"~s\", sex=~B, level=~B, diamond=~B where role_id=~B", 
+                [NewRec#role.account_id, NewRec#role.name, NewRec#role.sex, NewRec#role.level, NewRec#role.diamond, NewRec#role.role_id]),
+            lager:info("query = ~p", [Query]),
+            emysql:execute(?DBPOOL, Query)
+    end,
     {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -103,10 +105,9 @@ update_connection() ->
     receive
     after 3000 ->
         Nodes = nodes(),
-        case lists:member('server1game@127.0.0.1', Nodes) of
+        case lists:member('servergame@127.0.0.1', Nodes) of
             false ->
-                lager:info("try connecting connector"),
-                case net_adm:ping('server1game@127.0.0.1') of
+                case net_adm:ping('servergame@127.0.0.1') of
                     pong ->
                         [lager:info("connect node<~p> success", [Node]) || Node <- nodes()],
                         [send_info(Node) || Node <- nodes()];
@@ -122,8 +123,8 @@ update_connection() ->
 %% 发送初始化数据
 send_info(Node) ->
     case Node of
-        Connector when Connector == 'server1game@127.0.0.1' ->
-            {game_connector, 'server1game@127.0.0.1'} ! {init_role, ets:tab2list(ets_role)};
+        Connector when Connector == 'servergame@127.0.0.1' ->
+            {game_connector, 'servergame@127.0.0.1'} ! {init_role, ets:tab2list(ets_role)};
         _Other ->
             pass
     end.
