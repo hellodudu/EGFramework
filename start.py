@@ -108,6 +108,8 @@ def proto():
 
 def rebuild():
     '''the first time run "rebar compile" will get some error like "cannot find files", just pass it'''
+    command = ''' rm -fr ebin && mkdir ebin '''
+    os.system( command  )
     get_deps()
     subprocess.call('rebar compile', shell=True)
 
@@ -155,7 +157,7 @@ def start_game(detach=False):
     os.system(command)
 
 def start_db(detach=False):
-    nodeName = SERVERID + 'db' + '@' + HOSTNAME
+    nodeName = SERVERID + 'db_session' + '@' + HOSTNAME
     command1 = erl + '-setcookie ' + COOKIE
     if detach == True:
         command1 += " -detached"
