@@ -9,7 +9,7 @@ HOSTNAME = "127.0.0.1"
 PORT     = "2345"
 USERNAME = "root"
 PASSWORD = "123qwe"
-SERVERID = "server"
+SERVERID = ""
 COOKIE   = "server"
 
 erl = "erl "
@@ -179,6 +179,18 @@ def start():
     start_db(True)
     start_game(True)
 
+def start_release():
+    command1 = "apps/db_session/rel/db_session/bin/db_session start" + " -port " + PORT + " -host " + HOSTNAME
+    command2 = "apps/game/rel/game/bin/game start" + " -port " + PORT + " -host " + HOSTNAME
+    os.system(command1)
+    os.system(command2)
+
+def stop_release():
+    command1 = "apps/db_session/rel/db_session/bin/db_session stop"
+    command2 = "apps/game/rel/game/bin/game stop"
+    os.system(command1)
+    os.system(command2)
+
 def stop():
     command = "ps aux|grep ensure_all_started|awk '{print $2}'|xargs kill -9"
     os.system(command)
@@ -186,6 +198,8 @@ def stop():
 def generate():
     subprocess.call('rebar compile generate', shell=True)
 
+def clean():
+    os.system("rebar clean")
 
 def help():
     helpMessage = '''
@@ -201,7 +215,9 @@ def help():
     print(helpMessage)
 
 if __name__ == '__main__':
-    commandFunMapper = { 'build':build, 'start':start, 'stop':stop, 'generate':generate, 'start_client':start_client, 'start_game':start_game, 'start_db':start_db, 'reset_db':reset_db, 'rebuild':rebuild, 'proto':proto,'help':help }
+    commandFunMapper = { 'build':build, 'start':start, 'start_release':start_release, 'stop':stop, 'generate':generate,
+                        'start_client':start_client, 'start_game':start_game, 'start_db':start_db, 'reset_db':reset_db,
+                        'rebuild':rebuild, 'proto':proto, 'stop_release':stop_release, 'clean':clean, 'help':help }
     try:
         command = sys.argv[1]
         commandFunMapper[command]()

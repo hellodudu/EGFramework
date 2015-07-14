@@ -132,7 +132,7 @@ handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole
                     [] ->
                         %% 更新ets数据
                         ets:insert(ets_role, StoreRoleRec),
-                        {db_session, 'serverdb@127.0.0.1'} ! {create_role, StoreRoleRec};
+                        {db_session, 'db_session@127.0.0.1'} ! {create_role, StoreRoleRec};
                     Result ->
                         lager:info("ets_role lookup result = ~p", [Result]),
                         ignore

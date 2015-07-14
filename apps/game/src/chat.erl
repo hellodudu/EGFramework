@@ -25,10 +25,4 @@ handle(_, _) ->
 validate_message(Message) -> 
     Message.
 
-session_filter(Element) ->
-    case Element#role.session of
-        undefined ->
-            false;
-        _ ->
-            true
-    end.
+

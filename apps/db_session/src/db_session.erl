@@ -105,9 +105,9 @@ update_connection() ->
     receive
     after 3000 ->
         Nodes = nodes(),
-        case lists:member('servergame@127.0.0.1', Nodes) of
+        case lists:member('game@127.0.0.1', Nodes) of
             false ->
-                case net_adm:ping('servergame@127.0.0.1') of
+                case net_adm:ping('game@127.0.0.1') of
                     pong ->
                         [lager:info("connect node<~p> success", [Node]) || Node <- nodes()],
                         [send_info(Node) || Node <- nodes()];
@@ -123,8 +123,8 @@ update_connection() ->
 %% 发送初始化数据
 send_info(Node) ->
     case Node of
-        Connector when Connector == 'servergame@127.0.0.1' ->
-            {game_connector, 'servergame@127.0.0.1'} ! {init_role, ets:tab2list(ets_role)};
+        Connector when Connector == 'game@127.0.0.1' ->
+            {game_connector, 'game@127.0.0.1'} ! {init_role, ets:tab2list(ets_role)};
         _Other ->
             pass
     end.
