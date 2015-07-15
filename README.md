@@ -42,11 +42,9 @@ linux下在[这里](https://github.com/basho/rebar) 下载源码编译或者直�
 ----------------
 
 1. 开启服务器
-    执行命令
-    $ ./start.py start
-    可以通过命令$ erl -setcookie server -name test@127.0.0.1 -remsh game@127.0.0.1
-    来连接上`game`节点
-    运行命令:erl -setcookie server -name test@127.0.0.1 -remsh db_session@127.0.0.1来attach上db_session节点。
+    执行命令$ ./start.py start 后game和db_session节点都开启在后台
+    * 可以通过命令$ erl -setcookie server -name test@127.0.0.1 -remsh game@127.0.0.1 来连接上`game`节点
+    * 运行命令$ erl -setcookie server -name test@127.0.0.1 -remsh db_session@127.0.0.1 来attach上`db_session`节点
 
 2. 终止服务器:
     执行命令:./start.py stop来结束game和db_session节点进程。
