@@ -28,16 +28,17 @@ linux下在[这里](https://github.com/basho/rebar) 下载源码编译或者直�
 带终端的服务器
 ---------------
 1. 重置数据库
-    执行命令
+
     $ ./start.py reset_db
     将`src/tools/db_game.sql`注入到mysql中
 
 2. 开启game节点
-    执行命令
+
     $ ./start.py start_game
 
 3. 开启db_session节点:
     新建一个终端并执行命令
+
     $ ./start.py start_db
     game和db_session节点都启动后会自动连接并且打印log到终端
 
@@ -45,27 +46,50 @@ linux下在[这里](https://github.com/basho/rebar) 下载源码编译或者直�
 ----------------
 
 1. 开启服务器
-    执行命令$ ./start.py start 后game和db_session节点都开启在后台
-    * 可以通过命令$ erl -setcookie server -name test@127.0.0.1 -remsh game@127.0.0.1 来连接上`game`节点
-    * 运行命令$ erl -setcookie server -name test@127.0.0.1 -remsh db_session@127.0.0.1 来attach上`db_session`节点
-    * 通过命令$ ps aux | grep application:ensure_all_started 来查看节点进程信息 
+
+    $ ./start.py start 
+    game和db_session节点都开启在后台
+
+    * 可以通过命令
+    
+        $ erl -setcookie server -name test@127.0.0.1 -remsh game@127.0.0.1 
+        来连接上`game`节点，`db_session`节点同理
+
+    * 通过命令
+        $ ps aux | grep application:ensure_all_started 
+        来查看节点进程信息 
 
 2. 终止服务器:
-    执行命令
+
         $ ./start.py stop 
-    来结束`game`和`db_session`节点进程
+    结束`game`和`db_session`节点进程
  
 
 Rebar管理多个app如何配置
 ==================
 使用rebar来管理多个app，使其可以在主目录下编译、清除、打包所有子app，并且所有子app都可以共享一份依赖开源库。
 
-1. 目录结构如下：
-![mark1](mark1.png)
-
-2. 需要修改配置的地方：
-    (1. 主目录下的rebar.config需要添加sub_dirs字段来标明子app和其rebar.config所在路径，比如这个项目在simple-erlang-game/rebar.config中添加一行：{sub_dirs, ["apps/db", "apps/game", "apps/client"]}.
-    (2. 子目录下的rebar.config需要添加deps_dir字段来指定子app依赖的开源库所在目录，这里指定目录为"../../deps"，这样所有的app都会共享一份deps。
-    (3. 子目录下的src/rel/reltool.config需要修改lib_dirs字段为{lib_dirs, ["../../../deps"]}，app那一行末尾添加一条属性{lib_dir, ".."}。
+## 目录结构
 
 
+![mark1](/png/mark1.png)
+
+## 需要修改配置的地方：
+1. 主目录下的`rebar.config`需要添加sub_dirs字段来标明子app和其rebar.config所在路径，比如这个项目在simple-erlang-game/rebar.config中添加一行`{sub_dirs, ["apps/db", "apps/game", "apps/client"]}.`
+
+
+    ![mark2](/png/mark2.png)
+
+2. 子目录下的`rebar.config`需要添加一行`{deps_dir, "../../deps"}`字段来指定子app依赖的开源库所在目录，这里指定目录为`"../../deps"`，这样所有的app都会共享一份deps
+
+
+    ![mark3](/png/mark3.png)
+
+3. 子目录下的`rebar.config`添加一行`{sub_dirs, ["rel"]}.`
+
+
+    ![mark4](/png/mark4.png)
+3. 子目录下的`src/rel/reltool.config`需要修改`lib_dirs`字段为`{lib_dirs, ["../../../deps"]}`，app那一行末尾添加一条属性`{lib_dir, ".."}`
+
+
+    ![mark5](/png/mark5.png)
