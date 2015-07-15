@@ -193,6 +193,12 @@ def stop_release():
     os.system(command1)
     os.system(command2)
 
+def attach_rel_game():
+    os.system("apps/game/rel/game/bin/game attach")
+
+def attach_rel_db():
+    os.system("apps/db_session/rel/db_session/bin/db_session attach")
+
 def stop():
     command = "ps aux|grep ensure_all_started|awk '{print $2}'|xargs kill -9"
     os.system(command)
@@ -219,7 +225,8 @@ def help():
 if __name__ == '__main__':
     commandFunMapper = { 'build':build, 'start':start, 'start_release':start_release, 'stop':stop, 'generate':generate,
                         'start_client':start_client, 'start_game':start_game, 'start_db':start_db, 'reset_db':reset_db,
-                        'rebuild':rebuild, 'proto':proto, 'stop_release':stop_release, 'clean':clean, 'help':help }
+                        'rebuild':rebuild, 'proto':proto, 'stop_release':stop_release, 'clean':clean, 'attach_rel_game':attach_rel_game,
+                        'attach_rel_db':attach_rel_db, 'help':help }
     try:
         command = sys.argv[1]
         commandFunMapper[command]()
