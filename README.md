@@ -81,6 +81,42 @@ cd进simple-erlang-game目录，终端中执行
     结束`game`和`db_session`节点进程
  
 
+客户端
+==================
+##连接
+
+    $ ./start.py start_client
+
+显示`connect success!`成功连接
+
+##创建账号并登陆
+
+    $ 1> client:login(100).
+    $ 2> 13:36:39.784 [info] recv Respond = {sc_account_login,0}
+
+返回一个元组，第二个元素是错误码，0代表操作成功
+
+##创建角色
+
+    $ 3> client:create_role("dd").
+    $ 4> 13:36:50.950 [info] recv Respond = {sc_account_create_role,0,[0]}
+
+返回元组的第二个参数是错误码，第三个参数是创建的角色id
+
+##获取角色列表
+
+    $ 5> client:get_role_list().
+    $ 6> 13:47:49.946 [info] recv Respond = {sc_account_get_role_id_list,0,[{role,0,396,"account1",1,1,20,{session,396,#Port<10685.5969>,ranch_tcp,<10685.2089.0>,0,logged_in},undefined}]}
+
+返回角色信息record
+
+##角色进入game
+
+    $ 5> client:enter_game(0).
+    $ 6> 13:37:03.804 [info] recv Respond = {sc_account_enter_game,0}
+
+返回错误码0成功
+
 Rebar管理多个app如何配置
 ==================
 使用rebar来管理多个app，使其可以在主目录下编译、清除、打包所有子app，并且所有子app都可以共享一份依赖开源库，rel版服务可以跑在无erlang环境下的linux主机上

@@ -200,7 +200,10 @@ def attach_rel_db():
     os.system("apps/db_session/rel/db_session/bin/db_session attach")
 
 def stop():
-    command = "ps aux|grep ensure_all_started|awk '{print $2}'|xargs kill -9"
+    command = "ps aux|grep db_session|awk '{print $2}'|xargs kill -9"
+    os.system(command)
+
+    command = "ps aux|grep game|awk '{print $2}'|xargs kill -9"
     os.system(command)
 
 def generate():

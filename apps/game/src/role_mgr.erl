@@ -125,23 +125,22 @@ handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole
                                    diamond=20},
 
                 %% id简单自增1
-                RoleId = db_session:get_max_rolenum() + 1,
-                StoreRoleRec = RoleRecord#role{role_id = RoleId},
-
-                case ets:lookup(ets_role, RoleId) of
-                    [] ->
+                RoleId = length(ets:tab2list(ets_role)),
+                case ets:member(ets_role, RoleId) of
+                    false ->
                         %% 更新ets数据
+                        StoreRoleRec = RoleRecord#role{role_id = RoleId},
                         ets:insert(ets_role, StoreRoleRec),
-                        {db_session, 'db_session@127.0.0.1'} ! {create_role, StoreRoleRec};
-                    Result ->
-                        lager:info("ets_role lookup result = ~p", [Result]),
-                        ignore
-                end,
+                        {db_session, 'db_session@127.0.0.1'} ! {create_role, StoreRoleRec},
 
-                %% 更新在线玩家列表
-                NewOnlineRoleList = [RoleId|OnlineRoleList],
-                put(online_role_list, NewOnlineRoleList),
-                #sc_account_create_role{result=?SUCCESS, role_id_list=NewOnlineRoleList};
+                        %% 更新在线玩家列表
+                        NewOnlineRoleList = [RoleId|OnlineRoleList],
+                        put(online_role_list, NewOnlineRoleList),
+                        #sc_account_create_role{result=?SUCCESS, role_id_list=NewOnlineRoleList};
+                    true ->
+                        lager:info("role_id<~p> exist = ~p", [RoleId]),
+                        #sc_account_create_role{result=?ROLE_EXISTED}
+                end;
             false ->
                 lager:info("length limit online role list size = ~p", [erlang:length(OnlineRoleList)]),
                 #sc_account_create_role{result=?ROLE_MAX_NUM_CREATED}
