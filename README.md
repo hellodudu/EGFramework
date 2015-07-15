@@ -106,14 +106,14 @@ cd进simple-erlang-game目录，终端中执行
 ##获取角色列表
 
     $ 5> client:get_role_list().
-    $ 6> 13:47:49.946 [info] recv Respond = {sc_account_get_role_id_list,0,[{role,0,396,"account1",1,1,20,{session,396,#Port<10685.5969>,ranch_tcp,<10685.2089.0>,0,logged_in},undefined}]}
+    $ 6> 13:47:49.946 [info] recv Respond = {sc_account_get_role_id_list,0,[{role,0,100,"account1",1,1,20,{session,100,#Port<10685.5969>,ranch_tcp,<10685.2089.0>,0,logged_in},undefined}]}
 
 返回角色信息record
 
 ##角色进入game
 
-    $ 5> client:enter_game(0).
-    $ 6> 13:37:03.804 [info] recv Respond = {sc_account_enter_game,0}
+    $ 7> client:enter_game(0).
+    $ 8> 13:37:03.804 [info] recv Respond = {sc_account_enter_game,0}
 
 返回错误码0成功
 
