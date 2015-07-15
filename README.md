@@ -2,13 +2,16 @@
 ==================
 ##安装emysql
 mac下在终端下输入命令
+
     $ brew install emysql
 
 ubuntu下在终端下输入命令
+
     $ apt-get install emysql
 
 ##安装rebar
 mac下终端输入命令
+
     $ brew install rebar
 
 linux下在[这里](https://github.com/basho/rebar) 下载源码编译或者直接下载rebar二进制文件，之后将rebar拷贝到`/usr/local/bin/`中，就能直接使用rebar命令了
