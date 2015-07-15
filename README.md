@@ -2,21 +2,21 @@
 ==================
 ##安装emysql
 mac下在终端下输入命令
-$ brew install emysql
+    $ brew install emysql
 
 ubuntu下在终端下输入命令
-$ apt-get install emysql
+    $ apt-get install emysql
 
 ##安装rebar
 mac下终端输入命令
-$ brew install rebar
+    $ brew install rebar
 
 linux下在[这里](https://github.com/basho/rebar) 下载源码编译或者直接下载rebar二进制文件，之后将rebar拷贝到`/usr/local/bin/`中，就能直接使用rebar命令了
 
 ##开始编译
     * cd进simple-erlang-game目录，终端中执行`./start.py rebuild`
     * 第一次编译时需要获取依赖库，编译时会提示缺少几个.erl文件，再运行一次./start.py rebuild就能自动生成缺少的文件了
-    * 之后再有代码修改可以直接运行`./start.py build`，这样不用执行`rebar get-deps`操作，会比`./start.py rebuild`更快
+    * 之后再有代码修改可以直接运行`./start.py build`，这样不用执行`rebar get-deps`和生成`proto`的操作，会比`./start.py rebuild`更快
 
 
 开启服务器
@@ -45,9 +45,12 @@ linux下在[这里](https://github.com/basho/rebar) 下载源码编译或者直�
     执行命令$ ./start.py start 后game和db_session节点都开启在后台
     * 可以通过命令$ erl -setcookie server -name test@127.0.0.1 -remsh game@127.0.0.1 来连接上`game`节点
     * 运行命令$ erl -setcookie server -name test@127.0.0.1 -remsh db_session@127.0.0.1 来attach上`db_session`节点
+    * 通过命令$ ps aux | grep application:ensure_all_started 来查看节点进程信息 
 
 2. 终止服务器:
-    执行命令:./start.py stop来结束game和db_session节点进程。
+    执行命令
+        $ ./start.py stop 
+    来结束`game`和`db_session`节点进程
  
 
 Rebar管理多个app如何配置
