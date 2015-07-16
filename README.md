@@ -1,13 +1,13 @@
 如何编译
 ==================
-##安装emysql
+##安装mysql
 mac下在终端下输入命令
 
-    $ brew install emysql
+    $ brew install mysql
 
 ubuntu下在终端下输入命令
 
-    $ apt-get install emysql
+    $ apt-get install mysql
 
 ##安装rebar
 mac下终端输入命令
