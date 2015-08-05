@@ -1,19 +1,20 @@
 %% simulate a client to connect to server.
 -module(client).
 
--include("../../include/account_pb.hrl").
--include("../../include/connector.hrl").
--include("../../include/error_code.hrl").
--include("../../include/role_pb.hrl").
--include("../../include/role.hrl").
--include("../../include/session.hrl").
--include("../../include/chat_pb.hrl").
+-include("account_pb.hrl").
+-include("connector.hrl").
+-include("error_code.hrl").
+-include("role_pb.hrl").
+-include("role.hrl").
+-include("session.hrl").
+-include("chat_pb.hrl").
 
 -behavoir(gen_server).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([start_link/2]).
 -export([start/2, stop/0, do_recv/1]).
+-export([start/0]).
 
 % 发送操作消息到服务器
 -export([
@@ -25,7 +26,12 @@
         chat/2
     ]).
 
+start() ->
+    start(get(ip), get(port)).
+
 start(Ip, Port) ->
+    put(ip, Ip),
+    put(port, Port),
     gen_server:start({local, ?MODULE}, ?MODULE, {Ip,Port}, []).
 
 start_link(Ip, Port) ->

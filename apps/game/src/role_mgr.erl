@@ -1,10 +1,10 @@
 -module(role_mgr).
--include("../../include/role.hrl").
--include("../../include/session.hrl").
--include("../../include/error_code.hrl").
--include("../../include/db.hrl").
--include("../../include/role_pb.hrl").
--include("../../include/account_pb.hrl").
+-include("role.hrl").
+-include("session.hrl").
+-include("error_code.hrl").
+-include("db.hrl").
+-include("role_pb.hrl").
+-include("account_pb.hrl").
 
 -behaviour(gen_server).
 
@@ -21,6 +21,8 @@ init([]) -> {ok, self()}.
 
 init() ->
     ets:new(ets_online_role_list, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}]),
+    {ok, Redis} = eredis:start_link(),
+    put(redis, Redis),
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 stop() ->
@@ -40,6 +42,14 @@ handle_info({init_db_role, RoleList}, State) ->
     ets:new(ets_role, [set, public, named_table, {write_concurrency, true}, {read_concurrency, true}, {keypos, #role.role_id}]),
     [ets:insert(ets_role, Role) || Role <- RoleList],
     {noreply, State};
+
+%% 写redis
+handle_info({save_role, RoleRec}, State) ->
+    KeyStr = io_lib:format("role:~B:name", [RoleRec#role.role_id]),
+    Redis = get(redis),
+    eredis:q(Redis, ["SET", KeyStr, "redis"]),
+    {noreply, State};
+
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -131,6 +141,11 @@ handle({CsAccountCreateRole, Session}) when erlang:is_record(CsAccountCreateRole
                         %% 更新ets数据
                         StoreRoleRec = RoleRecord#role{role_id = RoleId},
                         ets:insert(ets_role, StoreRoleRec),
+
+                        %% 写redis
+                        self() ! {save_role, StoreRoleRec},
+
+                        %% 发送到mysql
                         {db_session, 'db_session@127.0.0.1'} ! {create_role, StoreRoleRec},
 
                         %% 更新在线玩家列表
@@ -218,3 +233,4 @@ get_role_record(RoleId) ->
 
 get_role_record_by_account(AccountID) ->
     ets:match_object(ets_role, #role{role_id = '_', account_id = AccountID, _='_'}).
+

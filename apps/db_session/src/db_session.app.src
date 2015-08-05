@@ -9,6 +9,7 @@
                     stdlib,
                     emysql,
                     lager]},
+    {included_applications, [pooler]},
     {env, []}
 ]
 }.

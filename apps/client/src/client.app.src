@@ -5,6 +5,7 @@
     {registered, [account_pb]},
     {mod, {client_app, [] } },
     {applications, []},
+    {included_applications, [pooler]},
     {env, []}
 ]
 }.

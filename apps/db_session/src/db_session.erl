@@ -1,9 +1,9 @@
 -module(db_session).
--include("../../include/account_pb.hrl").
--include("../../include/role.hrl").
--include("../../include/role_pb.hrl").
--include("../../include/session.hrl").
--include("../../include/db.hrl").
+-include("account_pb.hrl").
+-include("role.hrl").
+-include("role_pb.hrl").
+-include("session.hrl").
+-include("db.hrl").
 
 -behaviour(gen_server).
 

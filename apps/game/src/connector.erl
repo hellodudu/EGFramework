@@ -1,8 +1,8 @@
 -module(connector).
--include("../../include/connector.hrl").
--include("../../include/account_pb.hrl").
--include("../../include/role_pb.hrl").
--include("../../include/session.hrl").
+-include("connector.hrl").
+-include("account_pb.hrl").
+-include("role_pb.hrl").
+-include("session.hrl").
 
 -behaviour(gen_server).
 -behaviour(ranch_protocol).
