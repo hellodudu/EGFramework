@@ -14,6 +14,7 @@ q(Command) ->
     q(Command, ?TIMEOUT).
 
 q(Command, Timeout) ->
+    lager:info("redis_query q Command = ~s~n", [Command]),
     poolboy:transaction(?REDIS_POOL, fun(Worker) ->
                                              gen_server:call(Worker, {q, Command, Timeout})
                                      end).

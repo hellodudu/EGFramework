@@ -23,10 +23,11 @@ load_role(RoleID) ->
     RetRoleRecord.
 
 save_role(RoleID, RoleRec) ->
-    redis_query:set(io_lib:format("role:~B:role_id", [RoleID]), RoleRec#role.role_id),
-    redis_query:set(io_lib:format("role:~B:account_id", [RoleID]), RoleRec#role.account_id),
-    redis_query:set(io_lib:format("role:~B:name", [RoleID]), RoleRec#role.account_id),
-    redis_query:set(io_lib:format("role:~B:sex", [RoleID]), RoleRec#role.sex),
-    redis_query:set(io_lib:format("role:~B:level", [RoleID]), RoleRec#role.level),
-    redis_query:set(io_lib:format("role:~B:diamond", [RoleID]), RoleRec#role.diamond),
+    Result1 = redis_query:set(io_lib:format("role:~B:role_id", [RoleID]), RoleRec#role.role_id),
+    Result2 = redis_query:set(io_lib:format("role:~B:account_id", [RoleID]), RoleRec#role.account_id),
+    Result3 = redis_query:set(io_lib:format("role:~B:name", [RoleID]), RoleRec#role.account_id),
+    Result4 = redis_query:set(io_lib:format("role:~B:sex", [RoleID]), RoleRec#role.sex),
+    Result5 = redis_query:set(io_lib:format("role:~B:level", [RoleID]), RoleRec#role.level),
+    Result6 = redis_query:set(io_lib:format("role:~B:diamond", [RoleID]), RoleRec#role.diamond),
+    lager:info("save_role result = ~p ~p ~p ~p ~p ~p ~n", [Result1, Result2, Result3, Result4, Result5, Result6]),
     true.

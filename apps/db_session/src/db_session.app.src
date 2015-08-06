@@ -8,8 +8,8 @@
                     kernel,
                     stdlib,
                     emysql,
+                    poolboy,
                     lager]},
-    {included_applications, [pooler]},
     {env, []}
 ]
 }.
